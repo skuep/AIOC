@@ -2777,7 +2777,7 @@
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 572c2d83-95d1-48d5-b7fa-08a534d26aa7)
     (property "Reference" "FB2" (id 0) (at 74.9808 25.4 90))
-    (property "Value" "742792695" (id 1) (at 74.9808 27.94 90))
+    (property "Value" "600R@100MHz" (id 1) (at 74.9808 27.94 90))
     (property "Footprint" "Inductor_SMD:L_0603_1608Metric" (id 2) (at 74.93 31.242 90)
       (effects (font (size 1.27 1.27)) hide)
     )
@@ -3139,7 +3139,7 @@
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 94d477a3-a334-4790-b269-fbd4f184062a)
     (property "Reference" "FB1" (id 0) (at 143.4592 25.4 90))
-    (property "Value" "742792695" (id 1) (at 143.4592 27.94 90))
+    (property "Value" "600R@100MHz" (id 1) (at 143.4592 27.94 90))
     (property "Footprint" "Inductor_SMD:L_0603_1608Metric" (id 2) (at 143.51 34.798 90)
       (effects (font (size 1.27 1.27)) hide)
     )
@@ -3877,10 +3877,10 @@
       (reference "D2") (unit 1) (value "LED") (footprint "LED_SMD:LED_0603_1608Metric")
     )
     (path "/94d477a3-a334-4790-b269-fbd4f184062a"
-      (reference "FB1") (unit 1) (value "742792695") (footprint "Inductor_SMD:L_0603_1608Metric")
+      (reference "FB1") (unit 1) (value "600R@100MHz") (footprint "Inductor_SMD:L_0603_1608Metric")
     )
     (path "/572c2d83-95d1-48d5-b7fa-08a534d26aa7"
-      (reference "FB2") (unit 1) (value "742792695") (footprint "Inductor_SMD:L_0603_1608Metric")
+      (reference "FB2") (unit 1) (value "600R@100MHz") (footprint "Inductor_SMD:L_0603_1608Metric")
     )
     (path "/c5b80805-bc26-457d-a1fd-cf6a8b83ea3f"
       (reference "J1") (unit 1) (value "12401832E402A") (footprint "Connector_USB:USB_C_Receptacle_Amphenol_12401610E4-2A")
