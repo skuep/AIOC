@@ -1458,7 +1458,7 @@
     (property "Sheetfile" "k1-aioc.kicad_sch")
     (property "Sheetname" "")
     (path "/1aa54aee-73d1-4ad7-9be8-4a97fea3007a")
-    (attr through_hole exclude_from_pos_files)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "J2" (at 1.1 3.17 270) (layer "F.SilkS")
       (effects (font (size 0.5 0.5) (thickness 0.1)))
       (tstamp c744810f-56eb-4c70-8749-8d87d59283a7)
