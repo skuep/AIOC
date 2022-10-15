@@ -357,7 +357,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "baofeng-aioc.kicad_pro",
+    "filename": "k1-aioc.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -391,7 +391,7 @@
       "idf": "",
       "netlist": "",
       "specctra_dsn": "",
-      "step": "baofeng-aioc.step",
+      "step": "../../3d/k1-aioc.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
