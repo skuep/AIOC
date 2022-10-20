@@ -27,7 +27,6 @@ void USBWakeUp_RMP_IRQHandler(void)
   tud_int_handler(0);
 }
 
-
 void USB_Init(void)
 {
     __HAL_REMAPINTERRUPT_USB_ENABLE();

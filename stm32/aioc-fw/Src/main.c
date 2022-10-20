@@ -57,9 +57,6 @@ static void SystemClock_Config(void)
     HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_PLLCLK_DIV2, RCC_MCODIV_1);
 }
 
-
-
-
 int main(void)
 {
     HAL_Init();
@@ -80,7 +77,6 @@ int main(void)
 
   return 0;
 }
-
 
 void NMI_Handler(void) {
 }
