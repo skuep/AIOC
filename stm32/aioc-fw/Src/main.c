@@ -66,10 +66,11 @@ int main(void)
 
     LED_Init();
 
+    LED_MODE(0, LED_MODE_SLOWPULSE3X);
+    LED_MODE(1, LED_MODE_SLOWPULSE3X);
+
     USB_Init();
 
-    LED_SET1(LED_IDLE_LEVEL);
-    LED_SET2(LED_IDLE_LEVEL);
 
     while (1) {
         USB_Task();

@@ -16,6 +16,7 @@ void USB_SERIAL_UART_IRQ(void)
             int32_t c = tud_cdc_n_read_char(ITF_NUM_CDC_0);
             assert(c != -1);
             USB_SERIAL_UART->TDR = (uint8_t) c;
+            LED_MODE(1, LED_MODE_FASTPULSE);
         } else {
             /* No char left in fifo. Disable TX-empty interrupt */
             __disable_irq();
@@ -29,6 +30,7 @@ void USB_SERIAL_UART_IRQ(void)
         if (tud_cdc_n_write_available(ITF_NUM_CDC_0) > 0) {
             uint8_t c = USB_SERIAL_UART->RDR;
             tud_cdc_n_write(ITF_NUM_CDC_0, &c, 1);
+            LED_MODE(0, LED_MODE_FASTPULSE);
         } else {
             /* No space in fifo currently. Pause this interrupt and re-enable later */
             __disable_irq();
@@ -132,19 +134,19 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
     if (dtr & !rts) {
         /* PTT1 */
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-        LED_SET2(LED_FULL_LEVEL);
+        LED_SET(1, 1);
     } else {
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-        LED_SET2(LED_IDLE_LEVEL);
+        LED_SET(1, 0);
     }
 
     if (!dtr & rts) {
         /* PTT2 */
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
-        LED_SET1(LED_FULL_LEVEL);
+        LED_SET(0, 1);
     } else {
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
-        LED_SET1(LED_IDLE_LEVEL);
+        LED_SET(0, 0);
     }
 }
 
