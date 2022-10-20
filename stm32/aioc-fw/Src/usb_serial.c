@@ -29,8 +29,11 @@ void USB_SERIAL_UART_IRQ(void)
         /* RX register is not empty, get character and put into USB send buffer */
         if (tud_cdc_n_write_available(ITF_NUM_CDC_0) > 0) {
             uint8_t c = USB_SERIAL_UART->RDR;
-            tud_cdc_n_write(ITF_NUM_CDC_0, &c, 1);
-            LED_MODE(0, LED_MODE_FASTPULSE);
+            if (!HAL_GPIO_ReadPin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT1)) {
+                /* Only store character when PTT1 is not asserted (shares the same pin) */
+                tud_cdc_n_write(ITF_NUM_CDC_0, &c, 1);
+                LED_MODE(0, LED_MODE_FASTPULSE);
+            }
         } else {
             /* No space in fifo currently. Pause this interrupt and re-enable later */
             __disable_irq();
@@ -49,6 +52,14 @@ void USB_SERIAL_UART_IRQ(void)
         /* Overflow error */
         USB_SERIAL_UART->ICR = USART_ICR_ORECF;
         assert(0);
+    }
+
+    if (ISR & USART_ISR_FE) {
+        USB_SERIAL_UART->ICR = USART_ISR_FE;
+    }
+
+    if (ISR & USART_ISR_NE) {
+        USB_SERIAL_UART->ICR = USART_ISR_NE;
     }
 }
 
@@ -133,19 +144,19 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
     if (dtr & !rts) {
         /* PTT1 */
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_SET);
         LED_SET(1, 1);
     } else {
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_RESET);
         LED_SET(1, 0);
     }
 
     if (!dtr & rts) {
         /* PTT2 */
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_SET);
         LED_SET(0, 1);
     } else {
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_RESET);
         LED_SET(0, 0);
     }
 }
@@ -177,6 +188,7 @@ void USB_SerialInit(void)
     USB_SERIAL_UART->CR1 = USART_CR1_RTOIE | UART_OVERSAMPLING_16 | UART_WORDLENGTH_8B
             | UART_PARITY_NONE | USART_CR1_RXNEIE | UART_MODE_TX_RX;
     USB_SERIAL_UART->CR2 = UART_RECEIVER_TIMEOUT_ENABLE | UART_STOPBITS_1;
+    USB_SERIAL_UART->CR3 = USART_CR3_EIE;
     USB_SERIAL_UART->BRR = (HAL_RCCEx_GetPeriphCLKFreq(USB_SERIAL_UART_PERIPHCLK) + USB_SERIAL_UART_DEFBAUD/2) / USB_SERIAL_UART_DEFBAUD;
     USB_SERIAL_UART->RTOR = ((uint32_t) USB_SERIAL_UART_RXTIMEOUT << USART_RTOR_RTO_Pos) & USART_RTOR_RTO_Msk;
     USB_SERIAL_UART->CR1 |= USART_CR1_UE;
