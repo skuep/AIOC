@@ -68,8 +68,8 @@ int main(void)
 
     USB_Init();
 
-    LED_SET1(0.0);
-    LED_SET1(0.0);
+    LED_SET1(LED_IDLE_LEVEL);
+    LED_SET2(LED_IDLE_LEVEL);
 
     while (1) {
         USB_Task();

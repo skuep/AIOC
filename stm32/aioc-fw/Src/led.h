@@ -8,8 +8,11 @@
 #define LED_GPIO_PIN1   GPIO_PIN_8
 #define LED_GPIO_PIN2   GPIO_PIN_9
 
-#define LED_SET1(x) LED_TIMER->CCR3 = ( ((uint32_t) ((x) * 255)) & 0xFF )
-#define LED_SET2(x) LED_TIMER->CCR4 = (512 - ( ((uint32_t) ((x) * 255)) & 0xFF ))
+#define LED_IDLE_LEVEL  0.1
+#define LED_FULL_LEVEL  1.0
+
+#define LED_SET1(x) LED_TIMER->CCR3 = (512 - ( ((uint32_t) ((x) * 255)) & 0xFF ))
+#define LED_SET2(x) LED_TIMER->CCR4 = ( ((uint32_t) ((x) * 255)) & 0xFF )
 
 void LED_Init(void);
 

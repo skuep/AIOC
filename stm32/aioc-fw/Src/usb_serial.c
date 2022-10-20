@@ -129,13 +129,22 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
 // Invoked when cdc when line state changed e.g connected/disconnected
 void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
-    // TODO set some indicator
-    if ( dtr )
-    {
-        LED_SET2(1.0);
-    }else
-    {
-        LED_SET2(0.0);
+    if (dtr & !rts) {
+        /* PTT1 */
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+        LED_SET2(LED_FULL_LEVEL);
+    } else {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+        LED_SET2(LED_IDLE_LEVEL);
+    }
+
+    if (!dtr & rts) {
+        /* PTT2 */
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+        LED_SET1(LED_FULL_LEVEL);
+    } else {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+        LED_SET1(LED_IDLE_LEVEL);
     }
 }
 
@@ -143,13 +152,23 @@ void USB_SerialInit(void)
 {
     /* Set up GPIO */
     __HAL_RCC_GPIOA_CLK_ENABLE();
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin = (GPIO_PIN_9 | GPIO_PIN_10);
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    GPIO_InitTypeDef SerialGpio;
+    SerialGpio.Pin = (GPIO_PIN_9 | GPIO_PIN_10);
+    SerialGpio.Mode = GPIO_MODE_AF_PP;
+    SerialGpio.Pull = GPIO_PULLUP;
+    SerialGpio.Speed = GPIO_SPEED_FREQ_LOW;
+    SerialGpio.Alternate = GPIO_AF7_USART1;
+    HAL_GPIO_Init(GPIOA, &SerialGpio);
+
+    /* Set up RTS and DTR controlled GPIOs */
+    GPIO_InitTypeDef RtsDtrGpio = {
+        .Pin = (GPIO_PIN_0 | GPIO_PIN_1),
+        .Mode = GPIO_MODE_OUTPUT_PP,
+        .Pull = GPIO_PULLDOWN,
+        .Speed = GPIO_SPEED_FREQ_LOW,
+        .Alternate = 0
+    };
+    HAL_GPIO_Init(GPIOA, &RtsDtrGpio);
 
     /* Initialize UART */
     __HAL_RCC_USART1_CLK_ENABLE();
@@ -162,6 +181,8 @@ void USB_SerialInit(void)
 
     /* Enable interrupt */
     NVIC_EnableIRQ(USART1_IRQn);
+
+
 }
 
 void USB_SerialTask(void)
