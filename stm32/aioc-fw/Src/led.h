@@ -9,6 +9,7 @@
 #define LED_GPIO_PIN1   GPIO_PIN_8
 #define LED_GPIO_PIN2   GPIO_PIN_9
 
+#define LED_OFF_LEVEL   0
 #define LED_IDLE_LEVEL  25
 #define LED_FULL_LEVEL  255
 

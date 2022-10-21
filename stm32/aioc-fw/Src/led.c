@@ -2,6 +2,7 @@
 #include "stm32f3xx_hal.h"
 #include <assert.h>
 
+uint8_t LedIdleLevels[2] = {LED_IDLE_LEVEL, LED_OFF_LEVEL};
 uint8_t LedStates[2] = {0, 0};
 uint8_t LedModes[2] = {LED_MODE_SOLID, LED_MODE_SOLID};
 uint8_t LedLevels[2] = {LED_IDLE_LEVEL, LED_IDLE_LEVEL};
@@ -28,9 +29,9 @@ void LED_TIMER_IRQ(void)
                 LedLevels[i] = LED_FULL_LEVEL;
             } else if ( (LedCounterPrev & 0x200) && !(LedCounter & 0x200) ) {
                 /* Falling Edge */
-                if (LedLevels[i] != LED_IDLE_LEVEL) {
+                if (LedLevels[i] != LedIdleLevels[i]) {
                     /* Only reset colors and mode when a pulse has been carried out */
-                    LedLevels[i] = LED_IDLE_LEVEL;
+                    LedLevels[i] = LedIdleLevels[i];
                     LedModes[i] = mode > LED_MODE_SLOWPULSE ? mode - 1 : LED_MODE_SOLID;
                 }
             }
@@ -45,15 +46,15 @@ void LED_TIMER_IRQ(void)
                 LedLevels[i] = LED_FULL_LEVEL;
             } else if ( (LedCounterPrev & 0x40) && !(LedCounter & 0x40) ) {
                 /* Falling Edge */
-                if (LedLevels[i] != LED_IDLE_LEVEL) {
-                    LedLevels[i] = LED_IDLE_LEVEL;
+                if (LedLevels[i] != LedIdleLevels[i]) {
+                    LedLevels[i] = LedIdleLevels[i];
                     LedModes[i] = mode > LED_MODE_FASTPULSE ? mode - 1 : LED_MODE_SOLID;
                 }
             }
             break;
 
         case LED_MODE_SOLID:
-            LedLevels[i] = LedStates[i] ? LED_FULL_LEVEL : LED_IDLE_LEVEL;
+            LedLevels[i] = LedStates[i] ? LED_FULL_LEVEL : LedIdleLevels[i];
             break;
 
         default:
