@@ -142,6 +142,13 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
 // Invoked when cdc when line state changed e.g connected/disconnected
 void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
+    if (dtr ^ rts) {
+        /* In case any PTT is asserted, disable UART transmitter due to those sharing the same lines */
+        __disable_irq();
+        USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_TE;
+        __enable_irq();
+    }
+
     if (dtr & !rts) {
         /* PTT1 */
         HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_SET);
@@ -158,6 +165,13 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
     } else {
         HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_RESET);
         LED_SET(0, 0);
+    }
+
+    if ( !(dtr ^ rts) ) {
+        /* Enable UART transmitter again, when no PTT is asserted */
+        __disable_irq();
+        USB_SERIAL_UART->CR1 |= USART_CR1_TE;
+        __enable_irq();
     }
 }
 
