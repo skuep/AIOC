@@ -29,7 +29,7 @@ void USB_SERIAL_UART_IRQ(void)
         /* RX register is not empty, get character and put into USB send buffer */
         if (tud_cdc_n_write_available(ITF_NUM_CDC_0) > 0) {
             uint8_t c = USB_SERIAL_UART->RDR;
-            if (!HAL_GPIO_ReadPin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT1)) {
+            if (!HAL_GPIO_ReadPin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT1)) {
                 /* Only store character when PTT1 is not asserted (shares the same pin) */
                 tud_cdc_n_write(ITF_NUM_CDC_0, &c, 1);
                 LED_MODE(0, LED_MODE_FASTPULSE);
@@ -144,19 +144,19 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
     if (dtr & !rts) {
         /* PTT1 */
-        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_SET);
         LED_SET(1, 1);
     } else {
-        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_RESET);
         LED_SET(1, 0);
     }
 
     if (!dtr & rts) {
         /* PTT2 */
-        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_SET);
         LED_SET(0, 1);
     } else {
-        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO_PTT, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_RESET);
         LED_SET(0, 0);
     }
 }
@@ -166,22 +166,22 @@ void USB_SerialInit(void)
     /* Set up GPIO */
     __HAL_RCC_GPIOA_CLK_ENABLE();
     GPIO_InitTypeDef SerialGpio;
-    SerialGpio.Pin = (GPIO_PIN_9 | GPIO_PIN_10);
+    SerialGpio.Pin = (USB_SERIAL_UART_PIN_TX | USB_SERIAL_UART_PIN_RX);
     SerialGpio.Mode = GPIO_MODE_AF_PP;
     SerialGpio.Pull = GPIO_PULLUP;
     SerialGpio.Speed = GPIO_SPEED_FREQ_LOW;
     SerialGpio.Alternate = GPIO_AF7_USART1;
-    HAL_GPIO_Init(GPIOA, &SerialGpio);
+    HAL_GPIO_Init(USB_SERIAL_UART_GPIO, &SerialGpio);
 
     /* Set up RTS and DTR controlled GPIOs */
     GPIO_InitTypeDef RtsDtrGpio = {
-        .Pin = (GPIO_PIN_0 | GPIO_PIN_1),
+        .Pin = (USB_SERIAL_UART_PIN_PTT2 | USB_SERIAL_UART_PIN_PTT1),
         .Mode = GPIO_MODE_OUTPUT_PP,
         .Pull = GPIO_PULLDOWN,
         .Speed = GPIO_SPEED_FREQ_LOW,
         .Alternate = 0
     };
-    HAL_GPIO_Init(GPIOA, &RtsDtrGpio);
+    HAL_GPIO_Init(USB_SERIAL_UART_GPIO, &RtsDtrGpio);
 
     /* Initialize UART */
     __HAL_RCC_USART1_CLK_ENABLE();
