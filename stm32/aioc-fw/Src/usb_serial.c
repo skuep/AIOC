@@ -29,8 +29,8 @@ void USB_SERIAL_UART_IRQ(void)
         /* RX register is not empty, get character and put into USB send buffer */
         if (tud_cdc_n_write_available(ITF_NUM_CDC_0) > 0) {
             uint8_t c = USB_SERIAL_UART->RDR;
-            if (!HAL_GPIO_ReadPin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT1)) {
-                /* Only store character when PTT1 is not asserted (shares the same pin) */
+            if ( !(USB_SERIAL_UART_GPIO->IDR & (USB_SERIAL_UART_PIN_PTT1 | USB_SERIAL_UART_PIN_PTT2)) ) {
+                /* Only store character when no PTT is asserted (shares the same pin) */
                 tud_cdc_n_write(ITF_NUM_CDC_0, &c, 1);
                 LED_MODE(0, LED_MODE_FASTPULSE);
             }
@@ -151,19 +151,19 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 
     if (dtr & !rts) {
         /* PTT1 */
-        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_SET);
+        USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT1;
         LED_SET(1, 1);
     } else {
-        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT1, GPIO_PIN_RESET);
+        USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT1;
         LED_SET(1, 0);
     }
 
     if (!dtr & rts) {
         /* PTT2 */
-        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_SET);
+        USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT2;
         LED_SET(0, 1);
     } else {
-        HAL_GPIO_WritePin(USB_SERIAL_UART_GPIO, USB_SERIAL_UART_PIN_PTT2, GPIO_PIN_RESET);
+        USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT2;
         LED_SET(0, 0);
     }
 
