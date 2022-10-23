@@ -2,6 +2,7 @@
 #include "stm32f3xx_hal.h"
 #include "tusb.h"
 #include "usb_serial.h"
+#include "usb_audio.h"
 
 // FIXME: Do all three need to be handled, or just the LP one?
 // USB high-priority interrupt (Channel 74): Triggered only by a correct
@@ -46,6 +47,7 @@ void USB_Init(void)
 
     // Init classes
     USB_SerialInit();
+    USB_AudioInit();
 
     // Start USB Stack
     tud_init(BOARD_TUD_RHPORT);
