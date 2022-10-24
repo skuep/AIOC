@@ -44,13 +44,8 @@
 #define BOARD_TUD_MAX_SPEED   OPT_MODE_DEFAULT_SPEED
 #endif
 
-// Conserve some precious USB packet memory
-#ifndef CFG_TUD_ENDPOINT0_SIZE
-#define CFG_TUD_ENDPOINT0_SIZE  8
-#endif
-
 #ifndef MAX_EP_COUNT
-#define MAX_EP_COUNT 5
+#define MAX_EP_COUNT 6
 #endif
 
 //--------------------------------------------------------------------
@@ -96,7 +91,7 @@
 //--------------------------------------------------------------------
 
 #ifndef CFG_TUD_ENDPOINT0_SIZE
-#define CFG_TUD_ENDPOINT0_SIZE    64
+#define CFG_TUD_ENDPOINT0_SIZE    8
 #endif
 
 //------------- CLASS -------------//
@@ -104,8 +99,8 @@
 #define CFG_TUD_CDC               1
 
 // CDC FIFO size of TX and RX
-#define CFG_TUD_CDC_RX_BUFSIZE   CFG_TUD_CDC_EP_BUFSIZE
-#define CFG_TUD_CDC_TX_BUFSIZE   CFG_TUD_CDC_EP_BUFSIZE
+#define CFG_TUD_CDC_RX_BUFSIZE   128
+#define CFG_TUD_CDC_TX_BUFSIZE   128
 
 // CDC Endpoint transfer buffer size, more is faster
 #define CFG_TUD_CDC_EP_BUFSIZE   64
@@ -116,17 +111,25 @@
 
  // Have a look into audio_device.h for all configurations
 
- #define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                                 TUD_AUDIO_MIC_ONE_CH_DESC_LEN
- #define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                                 1                                       // Number of Standard AS Interface Descriptors (4.9.1) defined per audio function - this is required to be able to remember the current alternate settings of these interfaces - We restrict us here to have a constant number for all audio functions (which means this has to be the maximum number of AS interfaces an audio function has and a second audio function with less AS interfaces just wastes a few bytes)
- #define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ                              64                                      // Size of control request buffer
+#define CFG_TUD_AUDIO_ENABLE_EP_IN                                    1
+#define CFG_TUD_AUDIO_ENABLE_EP_OUT                                   1
 
- #define CFG_TUD_AUDIO_ENABLE_EP_IN                                    1
- #define CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX                    2                                       // Driver gets this info from the descriptors - we define it here to use it to setup the descriptors and to do calculations with it below
- #define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX                            1                                       // Driver gets this info from the descriptors - we define it here to use it to setup the descriptors and to do calculations with it below - be aware: for different number of channels you need another descriptor!
- #define CFG_TUD_AUDIO_EP_SZ_IN                                        48 * CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX      // 48 Samples (48 kHz) x 2 Bytes/Sample x 1 Channel
- #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX                             CFG_TUD_AUDIO_EP_SZ_IN                  // Maximum EP IN size for all AS alternate settings used
- #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ                          CFG_TUD_AUDIO_EP_SZ_IN + 1
+#define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                                 TUD_AUDIO_IO_DESC_LEN
+#define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                                 1
+#define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ                              64
+#define CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE                       2
+#define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX                            1
+#define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX                            1
+#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX                            CFG_TUD_AUDIO_EP_SZ_OUT + CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE
+#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ                         CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX
+#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX                             CFG_TUD_AUDIO_EP_SZ_IN + CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE
+#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ                          CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX
 
+#define CFG_TUD_AUDIO_EP_SZ_IN                                        (48) * CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX      // 48 Samples (48 kHz) x 2 Bytes/Sample x 1 Channel
+#define CFG_TUD_AUDIO_EP_SZ_OUT                                       (48) * CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX      // 48 Samples (48 kHz) x 2 Bytes/Sample x 1 Channel
+
+/* Include this here for pulling length of custom descriptors into tinyusb stack */
+#include "usb_descriptors.h"
 
 #ifdef __cplusplus
  }

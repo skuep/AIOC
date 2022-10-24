@@ -1,8 +1,9 @@
-#include <usb.h>
+#include "usb.h"
 #include "stm32f3xx_hal.h"
 #include "tusb.h"
 #include "usb_serial.h"
 #include "usb_audio.h"
+
 
 // FIXME: Do all three need to be handled, or just the LP one?
 // USB high-priority interrupt (Channel 74): Triggered only by a correct
@@ -26,6 +27,31 @@ void USB_LP_IRQHandler(void)
 void USBWakeUp_RMP_IRQHandler(void)
 {
   tud_int_handler(0);
+}
+
+// Invoked when device is mounted (configured)
+void tud_mount_cb(void)
+{
+
+}
+
+// Invoked when device is unmounted
+void tud_umount_cb(void)
+{
+
+}
+
+// Invoked when usb bus is suspended
+// Within 7ms, device must draw an average of current less than 2.5 mA from bus
+void tud_suspend_cb(bool remote_wakeup_en)
+{
+
+}
+
+// Invoked when usb bus is resumed
+void tud_resume_cb(void)
+{
+
 }
 
 void USB_Init(void)

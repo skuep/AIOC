@@ -154,7 +154,7 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
   uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
 
   // Input terminal (Microphone input)
-  if (entityID == 1)
+  if (entityID == AUDIO_CTRL_ID_MIC_INPUT)
   {
     switch ( ctrlSel )
     {
@@ -182,7 +182,7 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
   }
 
   // Feature unit
-  if (entityID == 2)
+  if (entityID == AUDIO_CTRL_ID_MIC_FUNIT)
   {
     switch ( ctrlSel )
     {
@@ -228,7 +228,7 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
   }
 
   // Clock Source unit
-  if ( entityID == 4 )
+  if ( entityID == AUDIO_CTRL_ID_CLOCK )
   {
     switch ( ctrlSel )
     {

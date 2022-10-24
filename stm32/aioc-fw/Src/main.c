@@ -70,7 +70,6 @@ int main(void)
 
     USB_Init();
 
-
     while (1) {
         USB_Task();
     }
