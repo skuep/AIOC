@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "aioc")(type "KiCad")(uri "${KIPRJMOD}/../library/aioc.kicad_sym")(options "")(descr ""))
+)
