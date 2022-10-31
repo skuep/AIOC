@@ -4,6 +4,38 @@
 #include "usb_serial.h"
 #include "usb_audio.h"
 
+// We have ISOCHRONOUS endpoints defined that share the same endpoint number, but have opposing directions.
+// However with STM32 hardware, ISOCHRONOUS endpoints use both RX and TX structures of the same endpoint register in hardware
+// We circumvent a clash by defining our own custom endpoint map for the tiny usb stack
+uint8_t tu_stm32_edpt_number_cb(uint8_t addr)
+{
+    switch (addr) {
+    case 0x00:
+    case 0x80:
+        /* Endpoint Zero */
+        return 0x00;
+
+    case EPNUM_AUDIO_IN:
+        return 0x01;
+
+    case EPNUM_AUDIO_OUT:
+        return 0x02;
+
+    case EPNUM_AUDIO_FB:
+        return 0x03;
+
+    case EPNUM_CDC_0_OUT:
+    case EPNUM_CDC_0_IN:
+        return 0x04;
+
+    case EPNUM_CDC_0_NOTIF:
+        return 0x05;
+
+    default:
+        TU_BREAKPOINT();
+        return 0x00;
+    }
+}
 
 // FIXME: Do all three need to be handled, or just the LP one?
 // USB high-priority interrupt (Channel 74): Triggered only by a correct
