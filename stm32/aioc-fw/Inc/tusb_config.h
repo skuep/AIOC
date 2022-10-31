@@ -114,7 +114,7 @@
 #define CFG_TUD_AUDIO_ENABLE_EP_IN                                    1
 #define CFG_TUD_AUDIO_ENABLE_EP_OUT                                   1
 #define CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP                              1
-#define CFG_TUD_AUDIO_ENABLE_FEEDBACK_FORMAT_CORRECTION               1
+
 
 #define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                                 TUD_AUDIO_IO_DESC_LEN
 #define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                                 1
