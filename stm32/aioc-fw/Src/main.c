@@ -57,12 +57,30 @@ static void SystemClock_Config(void)
     HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_PLLCLK_DIV2, RCC_MCODIV_1);
 }
 
+int _write(int file, char *ptr, int len)
+{
+	for (uint32_t i=0; i<len; i++) {
+		ITM_SendChar(*ptr++);
+	}
+
+	return len;
+}
+
 int main(void)
 {
     HAL_Init();
     SystemClock_Config();
 
     __HAL_RCC_SYSCFG_CLK_ENABLE();
+
+    GPIO_InitTypeDef GpioSWOInit = {
+        .Pin = GPIO_PIN_3,
+        .Mode = GPIO_MODE_AF_PP,
+        .Pull = GPIO_NOPULL,
+        .Speed = GPIO_SPEED_FREQ_LOW,
+        .Alternate = GPIO_AF0_TRACE
+    };
+    HAL_GPIO_Init(GPIOB, &GpioSWOInit);
 
     LED_Init();
     LED_MODE(0, LED_MODE_SLOWPULSE2X);
