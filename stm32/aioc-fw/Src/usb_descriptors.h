@@ -14,10 +14,10 @@ enum USB_DESCRIPTORS_ITF {
 /* Endpoints */
 #define EPNUM_AUDIO_IN      0x81
 #define EPNUM_AUDIO_OUT     0x02
-#define EPNUM_AUDIO_FB      0x83
-#define EPNUM_CDC_0_OUT     0x04
-#define EPNUM_CDC_0_IN      0x84
-#define EPNUM_CDC_0_NOTIF   0x85
+#define EPNUM_AUDIO_FB      0x82
+#define EPNUM_CDC_0_OUT     0x03
+#define EPNUM_CDC_0_IN      0x83
+#define EPNUM_CDC_0_NOTIF   0x84
 
 /* Custom Audio Descriptor.
  * Courtesy of https://github.com/hathach/tinyusb/issues/1249#issuecomment-1148727765 */
@@ -101,7 +101,7 @@ enum USB_DESCRIPTORS_ITF {
     /* Interface 1, Alternate 1 - alternate interface for data streaming */ \
     TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)((_itfnum)+2), /*_altset*/ 0x01, /*_nEPs*/ 0x01, /*_stridx*/ 0x00), \
     /* Class-Specific AS Interface Descriptor(4.9.2) */ \
-    TUD_AUDIO_DESC_CS_AS_INT(AUDIO_CTRL_ID_MIC_OUTPUT_STREAM, AUDIO_CTRL_NONE, AUDIO_FORMAT_TYPE_I, AUDIO_DATA_FORMAT_TYPE_I_PCM, AUDIO_NUM_INCHANNELS, AUDIO_CHANNEL_CONFIG_FRONT_LEFT | AUDIO_CHANNEL_CONFIG_FRONT_RIGHT, /*_stridx*/ 0x00), \
+    TUD_AUDIO_DESC_CS_AS_INT(AUDIO_CTRL_ID_MIC_OUTPUT_STREAM, AUDIO_CTRL_NONE, AUDIO_FORMAT_TYPE_I, AUDIO_DATA_FORMAT_TYPE_I_PCM, AUDIO_NUM_INCHANNELS, AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00), \
     /* Type I Format Type Descriptor(2.3.1.6 - Audio Formats) */ \
     TUD_AUDIO_DESC_TYPE_I_FORMAT(_nBytesPerSample, _nBitsUsedPerSample), \
     /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */ \
