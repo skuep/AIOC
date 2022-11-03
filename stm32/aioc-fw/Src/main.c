@@ -1,5 +1,5 @@
-#include "stm32f3xx.h"
 #include "stm32f3xx_hal.h"
+#include "aioc.h"
 #include "led.h"
 #include "usb.h"
 
@@ -41,6 +41,8 @@ static void SystemClock_Config(void)
     };
 
     HAL_RCC_ClockConfig(&ClkConfig, FLASH_LATENCY_2);
+
+    NVIC_SetPriority(SysTick_IRQn, AIOC_IRQ_PRIO_SYSTICK);
 
     /* Enable MCO Pin to PLL/2 output */
     __HAL_RCC_GPIOA_CLK_ENABLE();

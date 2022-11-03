@@ -1,6 +1,6 @@
 #include "usb_serial.h"
 #include "stm32f3xx_hal.h"
-#include <assert.h>
+#include "aioc.h"
 #include "tusb.h"
 #include "led.h"
 #include "usb_descriptors.h"
@@ -12,9 +12,9 @@ void USB_SERIAL_UART_IRQ(void)
     if (ISR & USART_ISR_TXE) {
         /* TX register is empty, load up another character */
         if (tud_cdc_n_available(ITF_NUM_CDC_0) > 0) {
-            /* Write char from fifo */
+             /* Write char from fifo */
             int32_t c = tud_cdc_n_read_char(ITF_NUM_CDC_0);
-            assert(c != -1);
+            TU_ASSERT(c != -1, /**/);
             USB_SERIAL_UART->TDR = (uint8_t) c;
             LED_MODE(1, LED_MODE_FASTPULSE);
         } else {
@@ -51,7 +51,7 @@ void USB_SERIAL_UART_IRQ(void)
     if (ISR & USART_ISR_ORE) {
         /* Overflow error */
         USB_SERIAL_UART->ICR = USART_ICR_ORECF;
-        assert(0);
+        TU_ASSERT(0, /**/);
     }
 
     if (ISR & USART_ISR_FE) {
@@ -99,7 +99,7 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
         if (p_line_coding->data_bits == 8) {
         } else {
             /* Support only 8 bit character size */
-            assert(0);
+            TU_ASSERT(0, /**/);
         }
 
         if (p_line_coding->parity == 0) {
@@ -116,7 +116,7 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
                     | UART_PARITY_EVEN | UART_WORDLENGTH_9B;
         } else {
             /* Other parity modes are not supported */
-            assert(0);
+            TU_ASSERT(0, /**/);
         }
 
         if (p_line_coding->stop_bits == 0) {
@@ -130,7 +130,7 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
             USB_SERIAL_UART->CR2 = (USB_SERIAL_UART->CR2 & (uint32_t) ~USART_CR2_STOP) | UART_STOPBITS_2;
         } else {
             /* Other stop bits unsupported */
-            assert(0);
+            TU_ASSERT(0, /**/);
         }
 
         /* Re-enable UUART and IRQs */
@@ -208,9 +208,10 @@ void USB_SerialInit(void)
     USB_SERIAL_UART->CR1 |= USART_CR1_UE;
 
     /* Enable interrupt */
+    NVIC_SetPriority(ADC1_2_IRQn, AIOC_IRQ_PRIO_SERIAL);
     NVIC_EnableIRQ(USART1_IRQn);
 
-
+    /* TODO: Enable TX line only when data is being sent to avoid parasitic powering */
 }
 
 void USB_SerialTask(void)

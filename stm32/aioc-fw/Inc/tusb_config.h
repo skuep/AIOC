@@ -115,7 +115,6 @@
 #define CFG_TUD_AUDIO_ENABLE_EP_OUT                                   1
 #define CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP                              1
 
-
 #define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                                 TUD_AUDIO_IO_DESC_LEN
 #define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                                 1
 #define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ                              64
@@ -123,9 +122,9 @@
 #define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX                            1
 #define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX                            1
 #define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX                            CFG_TUD_AUDIO_EP_SZ_OUT + CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE
-#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ                         2*CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX
+#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ                         256 /* FIFO not being power of 2 seem to result in all kinds of BusFaults? */
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX                             CFG_TUD_AUDIO_EP_SZ_IN + CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE
-#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ                          2*CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX
+#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ                          256
 
 #define CFG_TUD_AUDIO_EP_SZ_IN                                        (48) * CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX      // 48 Samples (48 kHz) x 2 Bytes/Sample x 1 Channel
 #define CFG_TUD_AUDIO_EP_SZ_OUT                                       (48) * CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX      // 48 Samples (48 kHz) x 2 Bytes/Sample x 1 Channel

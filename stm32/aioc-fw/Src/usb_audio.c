@@ -1,6 +1,7 @@
 #include "usb_audio.h"
-#include "tusb.h"
 #include "stm32f3xx_hal.h"
+#include "aioc.h"
+#include "tusb.h"
 
 #ifndef AUDIO_SAMPLE_RATE
 #define AUDIO_SAMPLE_RATE   48000
@@ -304,6 +305,22 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
     (void) rhport;
     (void) p_request;
 
+    switch(p_request->wIndex) {
+    case ITF_NUM_AUDIO_STREAMING_IN:
+        /* Microphone channel has been activated */
+        /* TODO: microphone = true; */
+        break;
+
+    case ITF_NUM_AUDIO_STREAMING_OUT:
+        /* Speaker channel has been activated */
+        /* TODO: audio out = true; */
+        break;
+
+    default:
+        TU_ASSERT(0, false);
+        break;
+    }
+
     NVIC_EnableIRQ(TIM3_IRQn);
     NVIC_EnableIRQ(ADC1_2_IRQn);
 
@@ -315,6 +332,23 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
 {
   (void) rhport;
   (void) p_request;
+
+  switch(p_request->wIndex) {
+  case ITF_NUM_AUDIO_STREAMING_IN:
+      /* Microphone channel has been stopped */
+      /* TODO: microphone = true; */
+      break;
+
+  case ITF_NUM_AUDIO_STREAMING_OUT:
+      /* Speaker channel has been stopped */
+      /* TODO: audio out = true; */
+      break;
+
+  default:
+      TU_ASSERT(0, false);
+      break;
+  }
+
   NVIC_DisableIRQ(TIM3_IRQn);
   NVIC_DisableIRQ(ADC1_2_IRQn);
 
@@ -438,6 +472,8 @@ static void Timer_Init(void)
     TIM2->EGR = TIM_EGR_UG;
     TIM2->CR1 |= TIM_CR1_CEN;
 
+    NVIC_SetPriority(TIM2_IRQn, 2);
+
 }
 
 static void ADC_Init(void)
@@ -480,7 +516,7 @@ static void ADC_Init(void)
     /* Start ADC */
     ADC2->CR |= ADC_CR_ADSTART;
 
-
+    NVIC_SetPriority(ADC1_2_IRQn, AIOC_IRQ_PRIO_AUDIO);
 }
 
 void DAC_Init(void)

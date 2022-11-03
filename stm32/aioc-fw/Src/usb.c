@@ -1,5 +1,6 @@
 #include "usb.h"
 #include "stm32f3xx_hal.h"
+#include "aioc.h"
 #include "tusb.h"
 #include "usb_serial.h"
 #include "usb_audio.h"
@@ -109,6 +110,9 @@ void USB_Init(void)
 
     // Start USB Stack
     tud_init(BOARD_TUD_RHPORT);
+
+    NVIC_SetPriority(USB_LP_IRQn, AIOC_IRQ_PRIO_USB);
+    NVIC_SetPriority(USB_HP_IRQn, AIOC_IRQ_PRIO_USB);
 }
 
 void USB_Task(void)
