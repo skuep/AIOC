@@ -21,6 +21,11 @@ audio_control_range_4_n_t(1) sampleFreqRng;                         // Sample fr
 uint16_t test_buffer_audio[CFG_TUD_AUDIO_EP_SZ_IN/2];
 uint16_t startVal = 0;
 
+#define FLAG_IN_START    0x00000010UL
+#define FLAG_OUT_START   0x00000100UL
+
+static volatile uint32_t flags;
+
 
 //--------------------------------------------------------------------+
 // Application Callback API Implementations
@@ -269,51 +274,60 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
   return false;     // Yet not implemented
 }
 
-#if 0
-bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, uint8_t cur_alt_setting)
-{
-  (void) rhport;
-  (void) itf;
-  (void) ep_in;
-  (void) cur_alt_setting;
+bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, uint8_t cur_alt_setting) {
+    (void) rhport;
+    (void) itf;
+    (void) ep_in;
+    (void) cur_alt_setting;
 
-  tud_audio_write ((uint8_t *)test_buffer_audio, CFG_TUD_AUDIO_EP_SZ_IN);
 
-  return true;
+    if (flags & FLAG_IN_START) {
+        /* Start ADC sampling as soon as device stacks starts loading data (will be a ZLP for first frame) */
+        NVIC_EnableIRQ(ADC1_2_IRQn);
+        flags &= (uint32_t) ~FLAG_IN_START;
+    }
+
+    return true;
 }
 
-
-bool tud_audio_tx_done_post_load_cb(uint8_t rhport, uint16_t n_bytes_copied, uint8_t itf, uint8_t ep_in, uint8_t cur_alt_setting)
+bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, uint8_t func_id, uint8_t ep_out, uint8_t cur_alt_setting)
 {
-  (void) rhport;
-  (void) n_bytes_copied;
-  (void) itf;
-  (void) ep_in;
-  (void) cur_alt_setting;
+    if (flags & FLAG_OUT_START) {
+        uint16_t count = tud_audio_available();
 
-  for (size_t cnt = 0; cnt < CFG_TUD_AUDIO_EP_SZ_IN/2; cnt++)
-  {
-    test_buffer_audio[cnt] = startVal++;
-  }
+        if (count >= (2 * CFG_TUD_AUDIO_EP_SZ_OUT)) {
+            /* Wait until at least two frames are in buffer, then start DAC */
+            flags &= (uint32_t) ~FLAG_OUT_START;
+            NVIC_EnableIRQ(TIM3_IRQn);
+        }
+    }
 
-  return true;
+    return true;
 }
-#endif
 
 bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_request)
 {
     (void) rhport;
     (void) p_request;
 
-    switch(p_request->wIndex) {
+    uint16_t itf = p_request->wIndex;
+    uint16_t alt = p_request->wValue;
+
+    switch(itf) {
     case ITF_NUM_AUDIO_STREAMING_IN:
-        /* Microphone channel has been activated */
-        /* TODO: microphone = true; */
+        if (alt == 1) {
+            /* Microphone channel has been activated */
+            flags |= FLAG_IN_START;
+            printf("IN opened\n");
+        }
         break;
 
     case ITF_NUM_AUDIO_STREAMING_OUT:
-        /* Speaker channel has been activated */
-        /* TODO: audio out = true; */
+        if (alt == 1) {
+            /* Speaker channel has been activated */
+            flags |= FLAG_OUT_START;
+            printf("OUT opened\n");
+        }
         break;
 
     default:
@@ -321,38 +335,32 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
         break;
     }
 
-    NVIC_EnableIRQ(TIM3_IRQn);
-    NVIC_EnableIRQ(ADC1_2_IRQn);
-
     return true;
 }
 
+bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const *p_request) {
+    (void) rhport;
+    (void) p_request;
 
-bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const * p_request)
-{
-  (void) rhport;
-  (void) p_request;
+    uint16_t itf = p_request->wIndex;
 
-  switch(p_request->wIndex) {
-  case ITF_NUM_AUDIO_STREAMING_IN:
-      /* Microphone channel has been stopped */
-      /* TODO: microphone = true; */
-      break;
+    switch (itf) {
+    case ITF_NUM_AUDIO_STREAMING_IN:
+        /* Microphone channel has been stopped */
+        NVIC_DisableIRQ(ADC1_2_IRQn);
+        break;
 
-  case ITF_NUM_AUDIO_STREAMING_OUT:
-      /* Speaker channel has been stopped */
-      /* TODO: audio out = true; */
-      break;
+    case ITF_NUM_AUDIO_STREAMING_OUT:
+        /* Speaker channel has been stopped */
+        NVIC_DisableIRQ(TIM3_IRQn);
+        break;
 
-  default:
-      TU_ASSERT(0, false);
-      break;
-  }
+    default:
+        TU_ASSERT(0, false);
+        break;
+    }
 
-  NVIC_DisableIRQ(TIM3_IRQn);
-  NVIC_DisableIRQ(ADC1_2_IRQn);
-
-  return true;
+    return true;
 }
 
 void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedback_params_t* feedback_param)
@@ -369,10 +377,10 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     uint32_t this_cycles = TIM2->CNT;
 
     /* Calculate number of master clock cycles between now and last call */
-    uint32_t diff_cycles = (uint32_t) (((uint64_t) this_cycles - prev_cycles) & 0xFFFFFFFFUL);
+    uint32_t cycles = (uint32_t) (((uint64_t) this_cycles - prev_cycles) & 0xFFFFFFFFUL);
 
     /* Notify the USB audio feedback endpoint */
-    tud_audio_feedback_update(0, diff_cycles);
+    tud_audio_feedback_update(0, cycles);
 
     /* Prepare for next time */
     prev_cycles = this_cycles;
@@ -385,13 +393,6 @@ void ADC1_2_IRQHandler (void)
         uint16_t value = ADC2->DR;
         int16_t a =  ((int32_t) value - 32768) & 0xFFFFU;
         tud_audio_write (&a, sizeof(value));
-
-        //uint16_t value = sine[startVal];
-        //tud_audio_write (&value, sizeof(value));
-        //startVal = startVal == (sizeof(sine)/sizeof(*sine)-1) ? 0 : startVal + 1;
-
-        //uint16_t value = startVal++;
-        //tud_audio_write(&value, sizeof(value));
     }
 }
 
@@ -399,18 +400,15 @@ void TIM3_IRQHandler(void)
 {
     if (TIM3->SR & TIM_SR_UIF) {
         TIM3->SR = (uint32_t) ~TIM_SR_UIF;
-
-        uint16_t items = tud_audio_available() / 2;
+        uint16_t items = tud_audio_available();
         int16_t sample = 0x0000;
+
         if (items > 0) {
-            /* Grab a sample from usb */
             tud_audio_read(&sample, sizeof(sample));
         }
 
-        int16_t a =  ((int32_t) sample + 32768) & 0xFFFFU;
-
         /* Load DAC holding register with sample */
-        DAC1->DHR12L1 = a;
+        DAC1->DHR12L1 = ((int32_t) sample + 32768) & 0xFFFFU;
     }
 }
 
