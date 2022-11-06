@@ -6,26 +6,25 @@
 #ifndef AUDIO_SAMPLE_RATE
 #define AUDIO_SAMPLE_RATE   48000
 #endif
-// Audio controls
-// Current states
-bool mute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                        // +1 for master channel 0
-uint16_t volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                    // +1 for master channel 0
-uint32_t sampFreq;
-uint8_t clkValid;
 
-// Range states
-audio_control_range_2_n_t(1) volumeRng[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX+1];           // Volume range state
-audio_control_range_4_n_t(1) sampleFreqRng;                         // Sample frequency range state
+static bool mute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                        // +1 for master channel 0
+static uint16_t volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                    // +1 for master channel 0
+static uint32_t sampFreq = AUDIO_SAMPLE_RATE;
+static uint8_t clkValid = 1;
 
-// Audio test data
-uint16_t test_buffer_audio[CFG_TUD_AUDIO_EP_SZ_IN/2];
-uint16_t startVal = 0;
+static audio_control_range_4_n_t(1) sampleFreqRng = {
+    .wNumSubRanges = 1,
+    .subrange[0] = {
+        .bMin = AUDIO_SAMPLE_RATE,
+        .bMax = AUDIO_SAMPLE_RATE,
+        .bRes = 0
+    }
+};
 
 #define FLAG_IN_START    0x00000010UL
 #define FLAG_OUT_START   0x00000100UL
 
 static volatile uint32_t flags;
-
 
 //--------------------------------------------------------------------+
 // Application Callback API Implementations
@@ -295,8 +294,8 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
     if (flags & FLAG_OUT_START) {
         uint16_t count = tud_audio_available();
 
-        if (count >= (2 * CFG_TUD_AUDIO_EP_SZ_OUT)) {
-            /* Wait until at least two frames are in buffer, then start DAC */
+        if (count >= (6 * CFG_TUD_AUDIO_EP_SZ_OUT)) {
+            /* Wait until at least n frames are in buffer, then start DAC output */
             flags &= (uint32_t) ~FLAG_OUT_START;
             NVIC_EnableIRQ(TIM3_IRQn);
         }
@@ -304,6 +303,7 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
 
     return true;
 }
+
 
 bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_request)
 {
@@ -318,7 +318,6 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
         if (alt == 1) {
             /* Microphone channel has been activated */
             flags |= FLAG_IN_START;
-            printf("IN opened\n");
         }
         break;
 
@@ -326,7 +325,6 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
         if (alt == 1) {
             /* Speaker channel has been activated */
             flags |= FLAG_OUT_START;
-            printf("OUT opened\n");
         }
         break;
 
@@ -368,19 +366,20 @@ void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedba
     /* Configure parameters for feedback endpoint */
     feedback_param->frequency.mclk_freq = 2 * HAL_RCC_GetPCLK1Freq();
     feedback_param->sample_freq = AUDIO_SAMPLE_RATE;
-    feedback_param->method = AUDIO_FEEDBACK_METHOD_FREQUENCY_FLOAT;
+    feedback_param->method = AUDIO_FEEDBACK_METHOD_FREQUENCY_FIXED;
 }
 
 TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t frame_number, uint8_t interval_shift)
 {
     static uint32_t prev_cycles = 0;
-    uint32_t this_cycles = TIM2->CNT;
+    uint32_t this_cycles = TIM2->CCR1; /* Load from capture register, which is set in tu_stm32_sof_cb */
 
     /* Calculate number of master clock cycles between now and last call */
     uint32_t cycles = (uint32_t) (((uint64_t) this_cycles - prev_cycles) & 0xFFFFFFFFUL);
+    TU_ASSERT(cycles != 0, /**/);
 
     /* Notify the USB audio feedback endpoint */
-    tud_audio_feedback_update(0, cycles);
+    tud_audio_feedback_update(func_id, cycles);
 
     /* Prepare for next time */
     prev_cycles = this_cycles;
@@ -390,9 +389,8 @@ void ADC1_2_IRQHandler (void)
 {
     if (ADC2->ISR & ADC_ISR_EOS) {
         ADC2->ISR = ADC_ISR_EOS;
-        uint16_t value = ADC2->DR;
-        int16_t a =  ((int32_t) value - 32768) & 0xFFFFU;
-        tud_audio_write (&a, sizeof(value));
+        uint16_t value = ((int32_t) ADC2->DR - 32768) & 0xFFFFU;
+        tud_audio_write (&value, sizeof(value));
     }
 }
 
@@ -459,19 +457,7 @@ static void Timer_Init(void)
     TIM3->DIER = TIM_DIER_UIE;
     TIM3->CR1 |= TIM_CR1_CEN;
 
-
-
-    __HAL_RCC_TIM2_CLK_ENABLE();
-
-    /* TIM2 generates a timebase for USB OUT feedback endpoint */
-    TIM2->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
-    TIM2->PSC = 0;
-    TIM2->ARR = 0xFFFFFFFFUL;
-    TIM2->EGR = TIM_EGR_UG;
-    TIM2->CR1 |= TIM_CR1_CEN;
-
-    NVIC_SetPriority(TIM2_IRQn, 2);
-
+    NVIC_SetPriority(TIM3_IRQn, AIOC_IRQ_PRIO_AUDIO);
 }
 
 static void ADC_Init(void)
@@ -529,14 +515,6 @@ void DAC_Init(void)
 
 void USB_AudioInit(void)
 {
-    sampFreq = AUDIO_SAMPLE_RATE;
-    clkValid = 1;
-
-    sampleFreqRng.wNumSubRanges = 1;
-    sampleFreqRng.subrange[0].bMin = AUDIO_SAMPLE_RATE;
-    sampleFreqRng.subrange[0].bMax = AUDIO_SAMPLE_RATE;
-    sampleFreqRng.subrange[0].bRes = 0;
-
     GPIO_Init();
     Timer_Init();
     ADC_Init();

@@ -38,6 +38,12 @@ uint8_t tu_stm32_edpt_number_cb(uint8_t addr)
     }
 }
 
+void tu_stm32_sof_cb(void)
+{
+    /* Capture timer value */
+    TIM2->EGR = TIM_EGR_CC1G;
+}
+
 // FIXME: Do all three need to be handled, or just the LP one?
 // USB high-priority interrupt (Channel 74): Triggered only by a correct
 // transfer event for isochronous and double-buffer bulk transfer to reach
@@ -87,10 +93,22 @@ void tud_resume_cb(void)
 
 }
 
-void USB_Init(void)
+void Timer_Init(void)
 {
-    __HAL_REMAPINTERRUPT_USB_ENABLE();
+    __HAL_RCC_TIM2_CLK_ENABLE();
 
+    /* TIM2 generates a timebase for USB OUT feedback endpoint */
+    TIM2->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
+    TIM2->PSC = 0;
+    TIM2->ARR = 0xFFFFFFFFUL;
+    TIM2->CCMR1 = (0x1 << TIM_CCMR1_CC1S_Pos);
+    TIM2->EGR = TIM_EGR_UG;
+    TIM2->CR1 |= TIM_CR1_CEN;
+
+}
+
+void GPIO_Init(void)
+{
     /* Configure USB DM and DP pins */
     __HAL_RCC_GPIOA_CLK_ENABLE();
     GPIO_InitTypeDef GPIO_InitStruct;
@@ -100,9 +118,15 @@ void USB_Init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF14_USB;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
 
-    // Enable USB clock
+void USB_Init(void)
+{
+    __HAL_REMAPINTERRUPT_USB_ENABLE();
     __HAL_RCC_USB_CLK_ENABLE();
+
+    GPIO_Init();
+    Timer_Init();
 
     // Init classes
     USB_SerialInit();
