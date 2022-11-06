@@ -1,5 +1,5 @@
 # AIOC
-This is the Ham Radio *All-in-one-Cable*
+This is the Ham Radio *All-in-one-Cable*. This is a work-in-progress project.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
@@ -19,3 +19,6 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 - Enclosure (DIY using 3D-Printed mold and Resin)
 - Finalizing Rev. B Schematic
 - Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
+
+
+![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
