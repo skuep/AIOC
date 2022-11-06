@@ -11,17 +11,20 @@ void USB_SERIAL_UART_IRQ(void)
 
     if (ISR & USART_ISR_TXE) {
         /* TX register is empty, load up another character */
-        if (tud_cdc_n_available(ITF_NUM_CDC_0) > 0) {
+        __disable_irq();
+        uint32_t available = tud_cdc_n_available(ITF_NUM_CDC_0);
+        if (available == 0) {
+            /* No char left in fifo. Disable transmitter and TX-empty interrupt */
+            USB_SERIAL_UART->CR1 &= (uint32_t) ~(USART_CR1_TE | USART_CR1_TXEIE);
+        }
+        __enable_irq();
+
+        if (available > 0) {
              /* Write char from fifo */
             int32_t c = tud_cdc_n_read_char(ITF_NUM_CDC_0);
             TU_ASSERT(c != -1, /**/);
             USB_SERIAL_UART->TDR = (uint8_t) c;
             LED_MODE(1, LED_MODE_FASTPULSE);
-        } else {
-            /* No char left in fifo. Disable TX-empty interrupt */
-            __disable_irq();
-            USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_TXEIE;
-            __enable_irq();
         }
     }
 
@@ -67,9 +70,9 @@ void USB_SERIAL_UART_IRQ(void)
 void tud_cdc_rx_cb(uint8_t itf)
 {
     if (itf == ITF_NUM_CDC_0) {
-        /* This enables TX-empty interrupt, which handles writing UART data */
+        /* This enables the transmitter and the TX-empty interrupt, which handles writing UART data */
         __disable_irq();
-        USB_SERIAL_UART->CR1 |= USART_CR1_TXEIE;
+        USB_SERIAL_UART->CR1 |= USART_CR1_TE | USART_CR1_TXEIE;
         __enable_irq();
     }
 }
@@ -200,7 +203,7 @@ void USB_SerialInit(void)
     /* Initialize UART */
     __HAL_RCC_USART1_CLK_ENABLE();
     USB_SERIAL_UART->CR1 = USART_CR1_RTOIE | UART_OVERSAMPLING_16 | UART_WORDLENGTH_8B
-            | UART_PARITY_NONE | USART_CR1_RXNEIE | UART_MODE_TX_RX;
+            | UART_PARITY_NONE | USART_CR1_RXNEIE | UART_MODE_RX; /* Enable receiver only, transmitter will be enabled on-demand */
     USB_SERIAL_UART->CR2 = UART_RECEIVER_TIMEOUT_ENABLE | UART_STOPBITS_1;
     USB_SERIAL_UART->CR3 = USART_CR3_EIE;
     USB_SERIAL_UART->BRR = (HAL_RCCEx_GetPeriphCLKFreq(USB_SERIAL_UART_PERIPHCLK) + USB_SERIAL_UART_DEFBAUD/2) / USB_SERIAL_UART_DEFBAUD;
@@ -210,8 +213,6 @@ void USB_SerialInit(void)
     /* Enable interrupt */
     NVIC_SetPriority(ADC1_2_IRQn, AIOC_IRQ_PRIO_SERIAL);
     NVIC_EnableIRQ(USART1_IRQn);
-
-    /* TODO: Enable TX line only when data is being sent to avoid parasitic powering */
 }
 
 void USB_SerialTask(void)
