@@ -1,5 +1,7 @@
 # AIOC
-This is the Ham Radio *All-in-one-Cable*. This is a work-in-progress project.
+This is the Ham Radio *All-in-one-Cable*. 
+
+**This is a work-in-progress project and production data may be out of date**!
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
