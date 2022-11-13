@@ -41,7 +41,7 @@ uint8_t tu_stm32_edpt_number_cb(uint8_t addr)
 void tu_stm32_sof_cb(void)
 {
     /* Capture timer value */
-    TIM2->EGR = TIM_EGR_CC1G;
+    USB_SOF_TIMER->EGR = TIM_EGR_CC1G;
 }
 
 // FIXME: Do all three need to be handled, or just the LP one?
@@ -98,13 +98,14 @@ void Timer_Init(void)
     __HAL_RCC_TIM2_CLK_ENABLE();
 
     /* TIM2 generates a timebase for USB OUT feedback endpoint */
-    TIM2->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
-    TIM2->PSC = 0;
-    TIM2->ARR = 0xFFFFFFFFUL;
-    TIM2->CCMR1 = (0x1 << TIM_CCMR1_CC1S_Pos);
-    TIM2->EGR = TIM_EGR_UG;
-    TIM2->CR1 |= TIM_CR1_CEN;
+    USB_SOF_TIMER->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
+    USB_SOF_TIMER->PSC = 0;
+    USB_SOF_TIMER->ARR = 0xFFFFFFFFUL;
+    USB_SOF_TIMER->CCMR1 = (0x1 << TIM_CCMR1_CC1S_Pos);
+    USB_SOF_TIMER->EGR = TIM_EGR_UG;
+    USB_SOF_TIMER->CR1 |= TIM_CR1_CEN;
 
+    TU_ASSERT((2 * HAL_RCC_GetPCLK1Freq()) == USB_SOF_TIMER_HZ, /**/);
 }
 
 void GPIO_Init(void)

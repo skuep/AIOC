@@ -2,21 +2,33 @@
 #include "stm32f3xx_hal.h"
 #include "aioc.h"
 #include "tusb.h"
+#include "usb.h"
 #include <math.h>
 
-#ifndef AUDIO_SAMPLE_RATE
+/* The one and only supported sample rate */
 #define AUDIO_SAMPLE_RATE   48000
-#endif
+/* This is feedback average responsivity with a denominator of 65536 */
+#define SPEAKER_FEEDBACK_AVG    32
+/* This is buffer level average responsivity with a denominator of 65536 */
+#define SPEAKER_BUFFERLVL_AVG   64
+/* This is the amount of buffer level to feedback coupling with a denominator of 65536 to prevent buffer drift */
+#define SPEAKER_BUFLVL_FB_COUPLING 1
+/* We try to stay on this target with the buffer level */
+#define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB */
 
-#define SPEAKER_FEEDBACK_AVG    8 /* This is feedback average responsivity with a denominator of 65536 */
-
-static bool microphoneMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                        // +1 for master channel 0
-static bool speakerMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1];                        // +1 for master channel 0
-static int16_t microphoneLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX] = 0 };                    // +1 for master channel 0
-static int16_t speakerLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 0 };                    // +1 for master channel 0
-static uint16_t microphoneLinVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 65535 };                    // +1 for master channel 0
-static uint16_t speakerLinVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 65535 };                    // +1 for master channel 0
-static uint64_t speakerFeedbackAvg = 0;
+/* Various state variables. N+1 because 0 is always the master channel */
+static bool microphoneMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];
+static bool speakerMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1];
+static int16_t microphoneLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX] = 0 }; /* in dB */
+static int16_t speakerLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 0 }; /* in dB */
+static uint16_t microphoneLinVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 65535 }; /* 0.16 format */
+static uint16_t speakerLinVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 65535 }; /* 0.16 format */
+static uint64_t speakerFeedbackAvg; /* 32.32 format */
+static uint32_t speakerFeedbackMin;
+static uint32_t speakerFeedbackMax;
+static uint32_t speakerBufferLvlAvg; /* 16.16 format */
+static uint16_t speakerBufferLvlMin;
+static uint16_t speakerBufferLvlMax;
 
 #define FLAG_IN_START    0x00000010UL
 #define FLAG_OUT_START   0x00000100UL
@@ -356,14 +368,25 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
 
 bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, uint8_t func_id, uint8_t ep_out, uint8_t cur_alt_setting)
 {
-    if (flags & FLAG_OUT_START) {
-        uint16_t count = tud_audio_available();
+    /* Get number of total bytes available in FIFO */
+    uint16_t count = tud_audio_available();
 
-        if (count >= (6 * CFG_TUD_AUDIO_EP_SZ_OUT)) {
-            /* Wait until at least n frames are in buffer, then start DAC output */
+    /* Calculate min/max/average of buffer fill level */
+    if ( (count - n_bytes_received) < speakerBufferLvlMin) speakerBufferLvlMin = count - n_bytes_received;
+    if ( count > speakerBufferLvlMax) speakerBufferLvlMax = count;
+    speakerBufferLvlAvg = ((uint64_t) speakerBufferLvlAvg * (65536 - SPEAKER_BUFFERLVL_AVG) + ((uint64_t) count << 16) * SPEAKER_BUFFERLVL_AVG) / 65536.0;
+
+    if (flags & FLAG_OUT_START) {
+        if (count >= SPEAKER_BUFFERLVL_TARGET) {
+            /* Wait until whe are at buffer target fill level, then start DAC output */
             flags &= (uint32_t) ~FLAG_OUT_START;
             NVIC_EnableIRQ(TIM3_IRQn);
         }
+
+        /* Initialize/override min/max/avg during startup buffering */
+        speakerBufferLvlAvg = count;
+        speakerBufferLvlMin = count;
+        speakerBufferLvlMax = count;
     }
 
     return true;
@@ -437,26 +460,44 @@ void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedba
 TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t frame_number, uint8_t interval_shift)
 {
     static uint32_t prev_cycles = 0;
-    uint32_t this_cycles = TIM2->CCR1; /* Load from capture register, which is set in tu_stm32_sof_cb */
+    uint32_t this_cycles = USB_SOF_TIMER_CCR; /* Load from capture register, which is set in tu_stm32_sof_cb */
     uint32_t feedback;
 
     /* Calculate number of master clock cycles between now and last call */
     uint32_t cycles = (uint32_t) (((uint64_t) this_cycles - prev_cycles) & 0xFFFFFFFFUL);
     TU_ASSERT(cycles != 0, /**/);
-
-    /* Notify the USB audio feedback endpoint */
-    feedback = tud_audio_feedback_update(func_id, cycles);
-
-    if (speakerFeedbackAvg == 0) {
-        /* Init */
-        speakerFeedbackAvg = (uint64_t) feedback << 16;
-    }
-
-    /* Low pass */
-    speakerFeedbackAvg = (speakerFeedbackAvg * (65536 - SPEAKER_FEEDBACK_AVG) + ((uint64_t) feedback << 16) * SPEAKER_FEEDBACK_AVG) / 65536.0;
-
     /* Prepare for next time */
     prev_cycles = this_cycles;
+
+    /* Calculate the feedback value, taken from tinyusb stack */
+    uint64_t fb64 = (((uint64_t) cycles) * AUDIO_SAMPLE_RATE) << 16;
+    feedback = (uint32_t) (fb64 / USB_SOF_TIMER_HZ);
+
+    uint32_t min_value = (AUDIO_SAMPLE_RATE/1000 - 1) << 16; /* 1000 for full-speed USB */
+    uint32_t max_value = (AUDIO_SAMPLE_RATE/1000 + 1) << 16;
+
+    /* Couple the buffer level bias to the feedback value to avoid buffer drift */
+    int32_t bias = (int32_t) speakerBufferLvlAvg - ((int32_t) SPEAKER_BUFFERLVL_TARGET << 16); /* 16.16 format same as feedback */
+    feedback -= ((int64_t) bias * SPEAKER_BUFLVL_FB_COUPLING) / 65536;
+
+    /* Limit */
+    if ( feedback > max_value ) feedback = max_value;
+    if ( feedback < min_value ) feedback = min_value;
+
+    /* Send to host */
+    tud_audio_n_fb_set(func_id, feedback);
+
+    /* Handle min/max/avg */
+    if (feedback < speakerFeedbackMin) speakerFeedbackMin = feedback;
+    if (feedback > speakerFeedbackMax) speakerFeedbackMax = feedback;
+    speakerFeedbackAvg = (speakerFeedbackAvg * (65536 - SPEAKER_FEEDBACK_AVG) + ((uint64_t) feedback << 16) * SPEAKER_FEEDBACK_AVG) / 65536.0;
+
+    if (flags & FLAG_OUT_START) {
+        /* Initialize/overwrite min/max/avg during start */
+        speakerFeedbackAvg = (uint64_t) feedback << 16;
+        speakerFeedbackMin = feedback;
+        speakerFeedbackMax = feedback;
+    }
 }
 
 void ADC1_2_IRQHandler (void)
@@ -481,13 +522,10 @@ void TIM3_IRQHandler(void)
 {
     if (TIM3->SR & TIM_SR_UIF) {
         TIM3->SR = (uint32_t) ~TIM_SR_UIF;
-        uint16_t items = tud_audio_available();
         int16_t sample = 0x0000;
 
-        if (items > 0) {
-            /* Read from FIFO */
-            tud_audio_read(&sample, sizeof(sample));
-        }
+        /* Read from FIFO, leave sample at 0 if fifo empty */
+        tud_audio_read(&sample, sizeof(sample));
 
         /* Get volume */
         uint16_t volume = !speakerMute[1] ? speakerLinVolume[1] : 0;
@@ -611,7 +649,21 @@ void USB_AudioInit(void)
     DAC_Init();
 }
 
-uint32_t USB_AudioGetSpeakerFeedback(void)
+void USB_AudioGetSpeakerFeedbackStats(usb_audio_fbstats_t * status)
 {
-    return (uint32_t) (speakerFeedbackAvg >> 16);
+    *status = (usb_audio_fbstats_t) {
+        .feedbackMin = speakerFeedbackMin,
+        .feedbackMax = speakerFeedbackMax,
+        .feedbackAvg = (uint32_t) (speakerFeedbackAvg >> 16)
+    };
+}
+
+void USB_AudioGetSpeakerBufferStats(usb_audio_bufstats_t * status)
+{
+    *status = (usb_audio_bufstats_t) {
+        .bufLevelMin = speakerBufferLvlMin,
+        .bufLevelMax =  speakerBufferLvlMax,
+        .bufLevelAvg = (uint16_t) (speakerBufferLvlAvg >> 16)
+    };
+
 }
