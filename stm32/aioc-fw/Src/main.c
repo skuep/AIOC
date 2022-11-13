@@ -2,9 +2,13 @@
 #include "aioc.h"
 #include "led.h"
 #include "usb.h"
+#include <assert.h>
+#include <stdio.h>
 
 static void SystemClock_Config(void)
 {
+    HAL_StatusTypeDef status;
+
     /* Enable external oscillator and configure PLL: 8 MHz (HSE) / 1 * 9 = 72 MHz */
     RCC_OscInitTypeDef OscConfig = {
         .OscillatorType = RCC_OSCILLATORTYPE_HSE,
@@ -21,7 +25,8 @@ static void SystemClock_Config(void)
         }
     };
 
-    HAL_RCC_OscConfig(&OscConfig);
+    status = HAL_RCC_OscConfig(&OscConfig);
+    assert(status == HAL_OK);
 
     /* Set correct peripheral clocks. 72 MHz (PLL) / 1.5 = 48 MHz */
     RCC_PeriphCLKInitTypeDef PeriphClk = {
@@ -29,7 +34,8 @@ static void SystemClock_Config(void)
         .USBClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5
     };
 
-    HAL_RCCEx_PeriphCLKConfig(&PeriphClk);
+    status = HAL_RCCEx_PeriphCLKConfig(&PeriphClk);
+    assert(status == HAL_OK);
 
     /* Set up divider for maximum speeds and switch clock */
     RCC_ClkInitTypeDef ClkConfig = {
@@ -40,7 +46,8 @@ static void SystemClock_Config(void)
         .APB2CLKDivider = RCC_HCLK_DIV1
     };
 
-    HAL_RCC_ClockConfig(&ClkConfig, FLASH_LATENCY_2);
+   status = HAL_RCC_ClockConfig(&ClkConfig, FLASH_LATENCY_2);
+   assert(status == HAL_OK);
 
     NVIC_SetPriority(SysTick_IRQn, AIOC_IRQ_PRIO_SYSTICK);
 
@@ -90,8 +97,21 @@ int main(void)
 
     USB_Init();
 
+    uint32_t i = 0;
     while (1) {
         USB_Task();
+
+        if ( (i++ & 0x7FFF) == 0) {
+            usb_audio_fbstats_t fb;
+            USB_AudioGetSpeakerFeedbackStats(&fb);
+
+            usb_audio_bufstats_t buf;
+            USB_AudioGetSpeakerBufferStats(&buf);
+
+            printf("buf: (%d/%d/%d) fb: (%06lX/%06lX/%06lX)\n",
+                    buf.bufLevelMin, buf.bufLevelMax, buf.bufLevelAvg,
+                    fb.feedbackMin, fb.feedbackMax, fb.feedbackAvg);
+        }
     }
 
   return 0;
