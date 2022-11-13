@@ -2,24 +2,21 @@
 #include "stm32f3xx_hal.h"
 #include "aioc.h"
 #include "tusb.h"
+#include <math.h>
 
 #ifndef AUDIO_SAMPLE_RATE
 #define AUDIO_SAMPLE_RATE   48000
 #endif
 
-static bool mute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                        // +1 for master channel 0
-static uint16_t volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                    // +1 for master channel 0
-static uint32_t sampFreq = AUDIO_SAMPLE_RATE;
-static uint8_t clkValid = 1;
+#define SPEAKER_FEEDBACK_AVG    8 /* This is feedback average responsivity with a denominator of 65536 */
 
-static audio_control_range_4_n_t(1) sampleFreqRng = {
-    .wNumSubRanges = 1,
-    .subrange[0] = {
-        .bMin = AUDIO_SAMPLE_RATE,
-        .bMax = AUDIO_SAMPLE_RATE,
-        .bRes = 0
-    }
-};
+static bool microphoneMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];                        // +1 for master channel 0
+static bool speakerMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1];                        // +1 for master channel 0
+static int16_t microphoneLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX] = 0 };                    // +1 for master channel 0
+static int16_t speakerLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 0 };                    // +1 for master channel 0
+static uint16_t microphoneLinVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 65535 };                    // +1 for master channel 0
+static uint16_t speakerLinVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 65535 };                    // +1 for master channel 0
+static uint64_t speakerFeedbackAvg = 0;
 
 #define FLAG_IN_START    0x00000010UL
 #define FLAG_OUT_START   0x00000100UL
@@ -29,44 +26,6 @@ static volatile uint32_t flags;
 //--------------------------------------------------------------------+
 // Application Callback API Implementations
 //--------------------------------------------------------------------+
-
-// Invoked when audio class specific set request received for an EP
-bool tud_audio_set_req_ep_cb(uint8_t rhport, tusb_control_request_t const * p_request, uint8_t *pBuff)
-{
-  (void) rhport;
-  (void) pBuff;
-
-  // We do not support any set range requests here, only current value requests
-  TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
-
-  // Page 91 in UAC2 specification
-  uint8_t channelNum = TU_U16_LOW(p_request->wValue);
-  uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
-  uint8_t ep = TU_U16_LOW(p_request->wIndex);
-
-  (void) channelNum; (void) ctrlSel; (void) ep;
-
-  return false;     // Yet not implemented
-}
-
-// Invoked when audio class specific set request received for an interface
-bool tud_audio_set_req_itf_cb(uint8_t rhport, tusb_control_request_t const * p_request, uint8_t *pBuff)
-{
-  (void) rhport;
-  (void) pBuff;
-
-  // We do not support any set range requests here, only current value requests
-  TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
-
-  // Page 91 in UAC2 specification
-  uint8_t channelNum = TU_U16_LOW(p_request->wValue);
-  uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
-  uint8_t itf = TU_U16_LOW(p_request->wIndex);
-
-  (void) channelNum; (void) ctrlSel; (void) itf;
-
-  return false;     // Yet not implemented
-}
 
 // Invoked when audio class specific set request received for an entity
 bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * p_request, uint8_t *pBuff)
@@ -79,13 +38,12 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
   uint8_t itf = TU_U16_LOW(p_request->wIndex);
   uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
 
-  (void) itf;
+  TU_ASSERT(itf == ITF_NUM_AUDIO_CONTROL);
 
   // We do not support any set range requests here, only current value requests
   TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
 
-  // If request is for our feature unit
-  if ( entityID == 2 )
+  if ( entityID == AUDIO_CTRL_ID_MIC_FUNIT )
   {
     switch ( ctrlSel )
     {
@@ -93,18 +51,21 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         // Request uses format layout 1
         TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_1_t));
 
-        mute[channelNum] = ((audio_control_cur_1_t*) pBuff)->bCur;
+        microphoneMute[channelNum] = ((audio_control_cur_1_t*) pBuff)->bCur;
 
-        TU_LOG2("    Set Mute: %d of channel: %u\r\n", mute[channelNum], channelNum);
+        TU_LOG2("    Set Mute: %d of channel: %u\r\n", microphoneMute[channelNum], channelNum);
       return true;
 
       case AUDIO_FU_CTRL_VOLUME:
         // Request uses format layout 2
         TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_2_t));
 
-        volume[channelNum] = (uint16_t) ((audio_control_cur_2_t*) pBuff)->bCur;
+        microphoneLogVolume[channelNum] = ((audio_control_cur_2_t*) pBuff)->bCur;
+        double logVolume = microphoneLogVolume[channelNum] / 256; /* format is 7.8 fixed point */
+        microphoneLinVolume[channelNum] = (microphoneLogVolume[channelNum] != 0x8000) ?
+                (uint16_t) (65535 * pow(10, logVolume/20) + 0.5) : 0; /* log to linear with rounding */
 
-        TU_LOG2("    Set Volume: %d dB of channel: %u\r\n", volume[channelNum], channelNum);
+        TU_LOG2("    Set Volume: %f dB of channel: %u\r\n", logVolume, channelNum);
       return true;
 
         // Unknown/Unsupported control
@@ -113,39 +74,41 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
       return false;
     }
   }
+
+  if ( entityID == AUDIO_CTRL_ID_SPK_FUNIT )
+  {
+    switch ( ctrlSel )
+    {
+      case AUDIO_FU_CTRL_MUTE:
+        // Request uses format layout 1
+        TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_1_t));
+
+        speakerMute[channelNum] = ((audio_control_cur_1_t*) pBuff)->bCur;
+
+        TU_LOG2("    Set Mute: %d of channel: %u\r\n", speakerMute[channelNum], channelNum);
+
+      return true;
+
+      case AUDIO_FU_CTRL_VOLUME:
+        // Request uses format layout 2
+        TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_2_t));
+
+        speakerLogVolume[channelNum] = ((audio_control_cur_2_t*) pBuff)->bCur;
+        double logVolume = (double) speakerLogVolume[channelNum] / 256; /* format is 7.8 fixed point */
+        speakerLinVolume[channelNum] = (speakerLogVolume[channelNum] != 0x8000) ?
+                (uint16_t) (65535 * pow(10, logVolume/20) + 0.5) : 0; /* log to linear with rounding */
+
+        TU_LOG2("    Set Volume: %f dB of channel: %u\r\n", logVolume, channelNum);
+      return true;
+
+        // Unknown/Unsupported control
+      default:
+        TU_BREAKPOINT();
+      return false;
+    }
+  }
+
   return false;    // Yet not implemented
-}
-
-// Invoked when audio class specific get request received for an EP
-bool tud_audio_get_req_ep_cb(uint8_t rhport, tusb_control_request_t const * p_request)
-{
-  (void) rhport;
-
-  // Page 91 in UAC2 specification
-  uint8_t channelNum = TU_U16_LOW(p_request->wValue);
-  uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
-  uint8_t ep = TU_U16_LOW(p_request->wIndex);
-
-  (void) channelNum; (void) ctrlSel; (void) ep;
-
-  //    return tud_control_xfer(rhport, p_request, &tmp, 1);
-
-  return false;     // Yet not implemented
-}
-
-// Invoked when audio class specific get request received for an interface
-bool tud_audio_get_req_itf_cb(uint8_t rhport, tusb_control_request_t const * p_request)
-{
-  (void) rhport;
-
-  // Page 91 in UAC2 specification
-  uint8_t channelNum = TU_U16_LOW(p_request->wValue);
-  uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
-  uint8_t itf = TU_U16_LOW(p_request->wIndex);
-
-  (void) channelNum; (void) ctrlSel; (void) itf;
-
-  return false;     // Yet not implemented
 }
 
 // Invoked when audio class specific get request received for an entity
@@ -156,8 +119,10 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
   // Page 91 in UAC2 specification
   uint8_t channelNum = TU_U16_LOW(p_request->wValue);
   uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
-  // uint8_t itf = TU_U16_LOW(p_request->wIndex);           // Since we have only one audio function implemented, we do not need the itf value
+  uint8_t itf = TU_U16_LOW(p_request->wIndex);
   uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
+
+  TU_ASSERT(itf == ITF_NUM_AUDIO_CONTROL);
 
   // Input terminal (Microphone input)
   if (entityID == AUDIO_CTRL_ID_MIC_INPUT)
@@ -187,35 +152,124 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
     }
   }
 
+  // Output terminal (Speaker output)
+  if (entityID == AUDIO_CTRL_ID_SPK_OUTPUT)
+  {
+    switch ( ctrlSel )
+    {
+      case AUDIO_TE_CTRL_CONNECTOR:
+      {
+        // The terminal connector control only has a get request with only the CUR attribute.
+        audio_desc_channel_cluster_t ret;
+
+        // Those are dummy values for now
+        ret.bNrChannels = 1;
+        ret.bmChannelConfig = 0;
+        ret.iChannelNames = 0;
+
+        TU_LOG2("    Get terminal connector\r\n");
+
+        return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, (void*) &ret, sizeof(ret));
+      }
+      break;
+
+        // Unknown/Unsupported control selector
+      default:
+        TU_BREAKPOINT();
+        return false;
+    }
+  }
+
+  if (entityID == AUDIO_CTRL_ID_SPK_FUNIT)
+  {
+      switch ( ctrlSel )
+      {
+        case AUDIO_FU_CTRL_MUTE:
+          // Audio control mute cur parameter block consists of only one byte - we thus can send it right away
+          // There does not exist a range parameter block for microphoneMute
+          TU_LOG2("    Get Mute of channel: %u\r\n", channelNum);
+          return tud_control_xfer(rhport, p_request, &speakerMute[channelNum], 1);
+
+        case AUDIO_FU_CTRL_VOLUME:
+          switch ( p_request->bRequest )
+          {
+            case AUDIO_CS_REQ_CUR:
+              TU_LOG2("    Get Volume of channel: %u\r\n", channelNum);
+              return tud_control_xfer(rhport, p_request, &speakerLogVolume[channelNum], sizeof(speakerLogVolume[channelNum]));
+
+            case AUDIO_CS_REQ_RANGE:
+              TU_LOG2("    Get Volume range of channel: %u\r\n", channelNum);
+
+              /* The Volume Control is one of the building blocks of a Feature Unit. A Volume Control must support the
+                CUR and RANGE(MIN, MAX, RES) attributes. The settings for the CUR, MIN, and MAX attributes can
+                range from +127.9961 dB (0x7FFF) down to -127.9961 dB (0x8001) in steps of 1/256 dB or 0.00390625
+                dB (0x0001). The settings for the RES attribute can only have positive values and range from 1/256 dB
+                (0x0001) to +127.9961 dB (0x7FFF).
+                In addition, code 0x8000, representing silence (i.e., -∞ dB), must always be implemented. However, it
+                must never be reported as the MIN attribute value. */
+
+              // Copy values - only for testing - better is version below
+              audio_control_range_2_n_t(1) ret;
+
+              /* From 1 (0dB) down to 1/65536 (-96dB) */
+              ret.wNumSubRanges = 1;
+              ret.subrange[0].bMin = -96 * 256;
+              ret.subrange[0].bMax = 0;
+              ret.subrange[0].bRes = 1;
+
+              return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, (void*) &ret, sizeof(ret));
+
+              // Unknown/Unsupported control
+            default:
+              TU_BREAKPOINT();
+              return false;
+          }
+        break;
+
+          // Unknown/Unsupported control
+        default:
+          TU_BREAKPOINT();
+          return false;
+      }
+  }
+
   // Feature unit
   if (entityID == AUDIO_CTRL_ID_MIC_FUNIT)
   {
     switch ( ctrlSel )
     {
       case AUDIO_FU_CTRL_MUTE:
-        // Audio control mute cur parameter block consists of only one byte - we thus can send it right away
-        // There does not exist a range parameter block for mute
+        // Audio control microphoneMute cur parameter block consists of only one byte - we thus can send it right away
+        // There does not exist a range parameter block for microphoneMute
         TU_LOG2("    Get Mute of channel: %u\r\n", channelNum);
-        return tud_control_xfer(rhport, p_request, &mute[channelNum], 1);
+        return tud_control_xfer(rhport, p_request, &microphoneMute[channelNum], 1);
 
       case AUDIO_FU_CTRL_VOLUME:
         switch ( p_request->bRequest )
         {
           case AUDIO_CS_REQ_CUR:
             TU_LOG2("    Get Volume of channel: %u\r\n", channelNum);
-            return tud_control_xfer(rhport, p_request, &volume[channelNum], sizeof(volume[channelNum]));
+            return tud_control_xfer(rhport, p_request, &microphoneLogVolume[channelNum], sizeof(microphoneLogVolume[channelNum]));
 
           case AUDIO_CS_REQ_RANGE:
             TU_LOG2("    Get Volume range of channel: %u\r\n", channelNum);
 
-            // Copy values - only for testing - better is version below
-            audio_control_range_2_n_t(1)
-            ret;
+            /* The Volume Control is one of the building blocks of a Feature Unit. A Volume Control must support the
+              CUR and RANGE(MIN, MAX, RES) attributes. The settings for the CUR, MIN, and MAX attributes can
+              range from +127.9961 dB (0x7FFF) down to -127.9961 dB (0x8001) in steps of 1/256 dB or 0.00390625
+              dB (0x0001). The settings for the RES attribute can only have positive values and range from 1/256 dB
+              (0x0001) to +127.9961 dB (0x7FFF).
+              In addition, code 0x8000, representing silence (i.e., -∞ dB), must always be implemented. However, it
+              must never be reported as the MIN attribute value. */
 
+            // Copy values - only for testing - better is version below
+            audio_control_range_2_n_t(1) ret;
+
+            /* From 1 (0dB) down to 1/65536 (-96dB) */
             ret.wNumSubRanges = 1;
-            ret.subrange[0].bMin = -90;    // -90 dB
-            ret.subrange[0].bMax = 90;      // +90 dB
-            ret.subrange[0].bRes = 1;       // 1 dB steps
+            ret.subrange[0].bMin = -96 * 256;
+            ret.subrange[0].bMax = 0;
+            ret.subrange[0].bRes = 1;
 
             return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, (void*) &ret, sizeof(ret));
 
@@ -244,10 +298,20 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         {
           case AUDIO_CS_REQ_CUR:
             TU_LOG2("    Get Sample Freq.\r\n");
+            uint32_t sampFreq = AUDIO_SAMPLE_RATE;
             return tud_control_xfer(rhport, p_request, &sampFreq, sizeof(sampFreq));
 
           case AUDIO_CS_REQ_RANGE:
             TU_LOG2("    Get Sample Freq. range\r\n");
+            audio_control_range_4_n_t(1) sampleFreqRng = {
+                .wNumSubRanges = 1,
+                .subrange[0] = {
+                    .bMin = AUDIO_SAMPLE_RATE,
+                    .bMax = AUDIO_SAMPLE_RATE,
+                    .bRes = 0
+                }
+            };
+
             return tud_control_xfer(rhport, p_request, &sampleFreqRng, sizeof(sampleFreqRng));
 
            // Unknown/Unsupported control
@@ -260,6 +324,8 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
       case AUDIO_CS_CTRL_CLK_VALID:
         // Only cur attribute exists for this request
         TU_LOG2("    Get Sample Freq. valid\r\n");
+
+        uint8_t clkValid = 1;
         return tud_control_xfer(rhport, p_request, &clkValid, sizeof(clkValid));
 
       // Unknown/Unsupported control
@@ -278,7 +344,6 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
     (void) itf;
     (void) ep_in;
     (void) cur_alt_setting;
-
 
     if (flags & FLAG_IN_START) {
         /* Start ADC sampling as soon as device stacks starts loading data (will be a ZLP for first frame) */
@@ -373,13 +438,22 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
 {
     static uint32_t prev_cycles = 0;
     uint32_t this_cycles = TIM2->CCR1; /* Load from capture register, which is set in tu_stm32_sof_cb */
+    uint32_t feedback;
 
     /* Calculate number of master clock cycles between now and last call */
     uint32_t cycles = (uint32_t) (((uint64_t) this_cycles - prev_cycles) & 0xFFFFFFFFUL);
     TU_ASSERT(cycles != 0, /**/);
 
     /* Notify the USB audio feedback endpoint */
-    tud_audio_feedback_update(func_id, cycles);
+    feedback = tud_audio_feedback_update(func_id, cycles);
+
+    if (speakerFeedbackAvg == 0) {
+        /* Init */
+        speakerFeedbackAvg = (uint64_t) feedback << 16;
+    }
+
+    /* Low pass */
+    speakerFeedbackAvg = (speakerFeedbackAvg * (65536 - SPEAKER_FEEDBACK_AVG) + ((uint64_t) feedback << 16) * SPEAKER_FEEDBACK_AVG) / 65536.0;
 
     /* Prepare for next time */
     prev_cycles = this_cycles;
@@ -389,8 +463,17 @@ void ADC1_2_IRQHandler (void)
 {
     if (ADC2->ISR & ADC_ISR_EOS) {
         ADC2->ISR = ADC_ISR_EOS;
-        uint16_t value = ((int32_t) ADC2->DR - 32768) & 0xFFFFU;
-        tud_audio_write (&value, sizeof(value));
+        /* Get ADC sample */
+        int16_t sample = ((int32_t) ADC2->DR - 32768) & 0xFFFFU;
+
+        /* Get volume */
+        uint16_t volume = !microphoneMute[1] ? microphoneLinVolume[1] : 0;
+
+        /* Scale with 16-bit unsigned volume and round */
+        sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
+
+        /* Store in FIFO */
+        tud_audio_write (&sample, sizeof(sample));
     }
 }
 
@@ -402,8 +485,15 @@ void TIM3_IRQHandler(void)
         int16_t sample = 0x0000;
 
         if (items > 0) {
+            /* Read from FIFO */
             tud_audio_read(&sample, sizeof(sample));
         }
+
+        /* Get volume */
+        uint16_t volume = !speakerMute[1] ? speakerLinVolume[1] : 0;
+
+        /* Scale with 16-bit unsigned volume and round */
+        sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
 
         /* Load DAC holding register with sample */
         DAC1->DHR12L1 = ((int32_t) sample + 32768) & 0xFFFFU;
@@ -519,5 +609,9 @@ void USB_AudioInit(void)
     Timer_Init();
     ADC_Init();
     DAC_Init();
+}
 
+uint32_t USB_AudioGetSpeakerFeedback(void)
+{
+    return (uint32_t) (speakerFeedbackAvg >> 16);
 }
