@@ -464,7 +464,7 @@
     (at 105.5 103.5)
     (descr "LED SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf), generated with kicad-footprint-generator")
     (tags "LED")
-    (property "LCSC" "C72038")
+    (property "LCSC" "C72043")
     (property "Sheetfile" "File: k1-aioc.kicad_sch")
     (property "Sheetname" "")
     (path "/44eaa438-6c06-4723-b7a3-c2f7fc0b787d")
@@ -1875,7 +1875,7 @@
     (property "Sheetfile" "File: k1-aioc.kicad_sch")
     (property "Sheetname" "")
     (path "/ba24aaa2-cdf6-43f8-bf42-f4a3c365b43c")
-    (attr through_hole exclude_from_bom)
+    (attr through_hole)
     (fp_text reference "H2" (at -0.508 -2.54 unlocked) (layer "F.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp 6e22087c-337a-4095-9b6f-6fe58af744f8)
@@ -2027,7 +2027,7 @@
     (property "Sheetfile" "File: k1-aioc.kicad_sch")
     (property "Sheetname" "")
     (path "/098bba9b-ee08-4339-943b-7dd4169e891d")
-    (attr through_hole exclude_from_bom)
+    (attr through_hole)
     (fp_text reference "H1" (at -0.508 -2.54 unlocked) (layer "F.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp bcc63d8c-bb6e-41ec-9bf4-f5428f0e40c6)
