@@ -2604,7 +2604,7 @@
   )
 
   (symbol (lib_id "Mechanical:MountingHole") (at 19.05 190.5 0) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (in_bom no) (on_board yes) (fields_autoplaced)
     (uuid 098bba9b-ee08-4339-943b-7dd4169e891d)
     (property "Reference" "H1" (id 0) (at 21.59 189.2299 0)
       (effects (font (size 1.27 1.27)) (justify left))
@@ -3170,7 +3170,7 @@
     (uuid 6928eae3-04b8-42b2-8f00-ec0b9aa50ceb)
     (property "Reference" "U1" (id 0) (at 106.68 25.4 0))
     (property "Value" "MIC5330-SSYML" (id 1) (at 106.68 27.94 0))
-    (property "Footprint" "Package_DFN_QFN:Micrel_MLF-8-1EP_2x2mm_P0.5mm_EP0.6x1.2mm" (id 2) (at 144.78 41.91 0)
+    (property "Footprint" "AIOC:Micrel_MLF-8-1EP_2x2mm_P0.5mm_EP0.6x1.2mm" (id 2) (at 144.78 41.91 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "http://ww1.microchip.com/downloads/en/DeviceDoc/mic5330.pdf" (id 3) (at 106.68 26.67 0)
@@ -3226,7 +3226,7 @@
     (uuid 6f45ce51-4cf6-4c8e-91b8-d0898b19a97d)
     (property "Reference" "Y1" (id 0) (at 77.47 142.24 0))
     (property "Value" "8MHz/20pF" (id 1) (at 77.47 144.78 0))
-    (property "Footprint" "Crystal:Crystal_SMD_5032-2Pin_5.0x3.2mm" (id 2) (at 77.47 149.86 0)
+    (property "Footprint" "AIOC:Crystal_SMD_5032-2Pin_5.0x3.2mm" (id 2) (at 77.47 149.86 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 77.47 149.86 0)
@@ -3720,7 +3720,7 @@
   )
 
   (symbol (lib_id "Mechanical:MountingHole") (at 39.37 190.5 0) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (in_bom no) (on_board yes) (fields_autoplaced)
     (uuid ba24aaa2-cdf6-43f8-bf42-f4a3c365b43c)
     (property "Reference" "H2" (id 0) (at 41.91 189.2299 0)
       (effects (font (size 1.27 1.27)) (justify left))
@@ -3801,7 +3801,7 @@
     (uuid c5b80805-bc26-457d-a1fd-cf6a8b83ea3f)
     (property "Reference" "J1" (id 0) (at 36.83 25.4 0))
     (property "Value" "12401832E402A" (id 1) (at 36.83 27.94 0))
-    (property "Footprint" "Connector_USB:USB_C_Receptacle_Amphenol_12401610E4-2A" (id 2) (at 40.64 48.26 0)
+    (property "Footprint" "AIOC:USB_C_Receptacle_Amphenol_12401832E40-2A" (id 2) (at 40.64 48.26 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "https://www.usb.org/sites/default/files/documents/usb_type-c.zip" (id 3) (at 40.64 48.26 0)
@@ -4331,7 +4331,7 @@
       (reference "H2") (unit 1) (value "ToolingHole") (footprint "AIOC:TOOLING-HOLE")
     )
     (path "/c5b80805-bc26-457d-a1fd-cf6a8b83ea3f"
-      (reference "J1") (unit 1) (value "12401832E402A") (footprint "Connector_USB:USB_C_Receptacle_Amphenol_12401610E4-2A")
+      (reference "J1") (unit 1) (value "12401832E402A") (footprint "AIOC:USB_C_Receptacle_Amphenol_12401832E40-2A")
     )
     (path "/f2c9e50d-789f-4fc9-bf13-807bdf38a185"
       (reference "J2") (unit 1) (value "Conn_01x07_Male") (footprint "Connector_PinHeader_1.27mm:PinHeader_1x07_P1.27mm_Vertical")
@@ -4394,13 +4394,13 @@
       (reference "R17") (unit 1) (value "N.M.") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
     (path "/6928eae3-04b8-42b2-8f00-ec0b9aa50ceb"
-      (reference "U1") (unit 1) (value "MIC5330-SSYML") (footprint "Package_DFN_QFN:Micrel_MLF-8-1EP_2x2mm_P0.5mm_EP0.6x1.2mm")
+      (reference "U1") (unit 1) (value "MIC5330-SSYML") (footprint "AIOC:Micrel_MLF-8-1EP_2x2mm_P0.5mm_EP0.6x1.2mm")
     )
     (path "/374c61ba-2500-40c8-8fa4-5bb019a70699"
       (reference "U2") (unit 1) (value "STM32F373CBTx") (footprint "Package_QFP:LQFP-48_7x7mm_P0.5mm")
     )
     (path "/6f45ce51-4cf6-4c8e-91b8-d0898b19a97d"
-      (reference "Y1") (unit 1) (value "8MHz/20pF") (footprint "Crystal:Crystal_SMD_5032-2Pin_5.0x3.2mm")
+      (reference "Y1") (unit 1) (value "8MHz/20pF") (footprint "AIOC:Crystal_SMD_5032-2Pin_5.0x3.2mm")
     )
   )
 )

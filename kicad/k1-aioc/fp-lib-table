@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name "AIOC")(type "KiCad")(uri "${KIPRJMOD}/../library/aioc.pretty")(options "")(descr ""))
+)
