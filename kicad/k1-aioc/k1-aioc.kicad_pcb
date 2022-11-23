@@ -1729,7 +1729,7 @@
     (at 105.5 94.75 -90)
     (descr "Micrel  MLF, 8 Pin (http://ww1.microchip.com/downloads/en/DeviceDoc/mic23050.pdf), generated with kicad-footprint-generator ipc_noLead_generator.py")
     (tags "Micrel MLF NoLead")
-    (property "LCSC" "C3752880")
+    (property "LCSC" "C144168")
     (property "Sheetfile" "k1-aioc.kicad_sch")
     (property "Sheetname" "")
     (path "/6928eae3-04b8-42b2-8f00-ec0b9aa50ceb")

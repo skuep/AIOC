@@ -3176,7 +3176,7 @@
     (property "Datasheet" "http://ww1.microchip.com/downloads/en/DeviceDoc/mic5330.pdf" (id 3) (at 106.68 26.67 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "LCSC" "C3752880" (id 4) (at 106.68 35.56 0)
+    (property "LCSC" "C144168" (id 4) (at 106.68 35.56 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid 0b767a4e-e4e9-4d0d-b1b8-5c1870c4511a))
