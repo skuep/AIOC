@@ -152,7 +152,7 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
         __enable_irq();
     }
 
-    if (dtr & !rts) {
+    if (!dtr & rts) {
         /* PTT1 */
         USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT1;
         LED_SET(1, 1);
@@ -161,7 +161,8 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
         LED_SET(1, 0);
     }
 
-    if (!dtr & rts) {
+#if AIOC_ENABLE_PTT2
+    if (dtr & !rts) {
         /* PTT2 */
         USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT2;
         LED_SET(0, 1);
@@ -169,6 +170,7 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
         USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT2;
         LED_SET(0, 0);
     }
+#endif
 
     if ( !(dtr ^ rts) ) {
         /* Enable UART transmitter again, when no PTT is asserted */
