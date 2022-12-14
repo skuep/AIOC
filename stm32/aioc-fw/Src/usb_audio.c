@@ -16,7 +16,15 @@
 /* We try to stay on this target with the buffer level */
 #define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB */
 
+typedef enum {
+    STATE_OFF,
+    STATE_START,
+    STATE_RUN
+} state_t;
+
 /* Various state variables. N+1 because 0 is always the master channel */
+static volatile state_t microphoneState = STATE_OFF;
+static volatile state_t speakerState = STATE_OFF;
 static bool microphoneMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];
 static bool speakerMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1];
 static int16_t microphoneLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX] = 0 }; /* in dB */
@@ -29,11 +37,6 @@ static uint32_t speakerFeedbackMax;
 static uint32_t speakerBufferLvlAvg; /* 16.16 format */
 static uint16_t speakerBufferLvlMin;
 static uint16_t speakerBufferLvlMax;
-
-#define FLAG_IN_START    0x00000010UL
-#define FLAG_OUT_START   0x00000100UL
-
-static volatile uint32_t flags;
 
 //--------------------------------------------------------------------+
 // Application Callback API Implementations
@@ -357,10 +360,10 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
     (void) ep_in;
     (void) cur_alt_setting;
 
-    if (flags & FLAG_IN_START) {
+    if (microphoneState == STATE_START) {
         /* Start ADC sampling as soon as device stacks starts loading data (will be a ZLP for first frame) */
         NVIC_EnableIRQ(ADC1_2_IRQn);
-        flags &= (uint32_t) ~FLAG_IN_START;
+        microphoneState = STATE_RUN;
     }
 
     return true;
@@ -376,10 +379,10 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
     if ( count > speakerBufferLvlMax) speakerBufferLvlMax = count;
     speakerBufferLvlAvg = ((uint64_t) speakerBufferLvlAvg * (65536 - SPEAKER_BUFFERLVL_AVG) + ((uint64_t) count << 16) * SPEAKER_BUFFERLVL_AVG) / 65536.0;
 
-    if (flags & FLAG_OUT_START) {
+    if (speakerState == STATE_START) {
         if (count >= SPEAKER_BUFFERLVL_TARGET) {
             /* Wait until whe are at buffer target fill level, then start DAC output */
-            flags &= (uint32_t) ~FLAG_OUT_START;
+            spkState = STATE_RUN;
             NVIC_EnableIRQ(TIM3_IRQn);
         }
 
@@ -405,14 +408,14 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
     case ITF_NUM_AUDIO_STREAMING_IN:
         if (alt == 1) {
             /* Microphone channel has been activated */
-            flags |= FLAG_IN_START;
+            microphoneState = STATE_START;
         }
         break;
 
     case ITF_NUM_AUDIO_STREAMING_OUT:
         if (alt == 1) {
             /* Speaker channel has been activated */
-            flags |= FLAG_OUT_START;
+            speakerState = STATE_START;
         }
         break;
 
@@ -434,11 +437,13 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
     case ITF_NUM_AUDIO_STREAMING_IN:
         /* Microphone channel has been stopped */
         NVIC_DisableIRQ(ADC1_2_IRQn);
+        microphoneState = STATE_OFF;
         break;
 
     case ITF_NUM_AUDIO_STREAMING_OUT:
         /* Speaker channel has been stopped */
         NVIC_DisableIRQ(TIM3_IRQn);
+        speakerState = STATE_OFF;
         break;
 
     default:
@@ -452,7 +457,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
 void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedback_params_t* feedback_param)
 {
     /* Configure parameters for feedback endpoint */
-    feedback_param->frequency.mclk_freq = 2 * HAL_RCC_GetPCLK1Freq();
+    feedback_param->frequency.mclk_freq = USB_SOF_TIMER_HZ;
     feedback_param->sample_freq = AUDIO_SAMPLE_RATE;
     feedback_param->method = AUDIO_FEEDBACK_METHOD_FREQUENCY_FIXED;
 }
@@ -477,8 +482,10 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     uint32_t max_value = (AUDIO_SAMPLE_RATE/1000 + 1) << 16;
 
     /* Couple the buffer level bias to the feedback value to avoid buffer drift */
-    int32_t bias = (int32_t) speakerBufferLvlAvg - ((int32_t) SPEAKER_BUFFERLVL_TARGET << 16); /* 16.16 format same as feedback */
-    feedback -= ((int64_t) bias * SPEAKER_BUFLVL_FB_COUPLING) / 65536;
+    if (speakerState == STATE_RUN) {
+        int32_t bias = (int32_t) speakerBufferLvlAvg - ((int32_t) SPEAKER_BUFFERLVL_TARGET << 16); /* 16.16 format same as feedback */
+        feedback -= ((int64_t) bias * SPEAKER_BUFLVL_FB_COUPLING) / 65536;
+    }
 
     /* Limit */
     if ( feedback > max_value ) feedback = max_value;
@@ -492,7 +499,7 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     if (feedback > speakerFeedbackMax) speakerFeedbackMax = feedback;
     speakerFeedbackAvg = (speakerFeedbackAvg * (65536 - SPEAKER_FEEDBACK_AVG) + ((uint64_t) feedback << 16) * SPEAKER_FEEDBACK_AVG) / 65536.0;
 
-    if (flags & FLAG_OUT_START) {
+    if (speakerState == STATE_START) {
         /* Initialize/overwrite min/max/avg during start */
         speakerFeedbackAvg = (uint64_t) feedback << 16;
         speakerFeedbackMin = feedback;
