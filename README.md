@@ -59,3 +59,10 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 - Select Radio->Download from Radio
 - Select the new COM/ttyACM port and start
 
+## Notes on APRSdroid
+Although theoretically not an issue, currently APRSdroid is not supported due to the following two issues:
+- According to https://github.com/ge0rg/aprsdroid/issues/156 the sample-rate is fixed to 22050 Hz. 
+  Currently, only 48000 Hz is supported (and 24000 Hz would be possible to implement). 
+  However 22050 would require a different timebase and is thus not possible unfortunately
+- Currently APRSdroid does not support any PTT control via a serial interface. 
+  However my previous experience is, that the Android kernel brings support for ttyACM devices (which is perfect) so implementing this feature should be no problem.
