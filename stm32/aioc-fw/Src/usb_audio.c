@@ -382,7 +382,7 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
     if (speakerState == STATE_START) {
         if (count >= SPEAKER_BUFFERLVL_TARGET) {
             /* Wait until whe are at buffer target fill level, then start DAC output */
-            spkState = STATE_RUN;
+            speakerState = STATE_RUN;
             NVIC_EnableIRQ(TIM3_IRQn);
         }
 
