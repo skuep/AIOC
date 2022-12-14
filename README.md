@@ -24,3 +24,38 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
+
+
+## How To Build
+- You need to use Monacor PG-204P and PG-203P or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection)
+- Cut the 2.5mm and 3.5mm TRS sleeve tab where the hole is located
+- Put both TRS connectors into the solder guide (or a cheap HT that you don't mind potentially damaging). Make sure, that they are seated all the way in
+- Solder sleeve tab on the back side for both TRS connectors first
+- Turn around PCB and solder remaining solder lugs
+
+## How To Program
+- Short outermost pins on the programming header. This will set the device into bootloader mode in the next step.
+- Connect USB-C cable to the AIOC PCB
+- Use a tool like dfu-util to program the Release Binary like this (see more information at https://yeswolf.github.io/dfu/):
+  ````
+  dfu-util -a 0 -s 0x08000000 -D aioc-fw.bin
+  ````
+- Unplug and replug the device, it should now enumerate as the AIOC device
+
+## How To use with Direwolf for APRS
+- Follow the regular setup guide with direwolf to determine the correct audio device to use
+- Configure the device as follows
+  ````
+  [...]
+  ADEVICE  plughw:<x>,0
+  ARATE 48000
+  [...]
+  PTT /dev/ttyACM0 RTS -DTR
+  [...]
+  ````
+
+## How To use with CHIRP for programming
+- Start CHIRP
+- Select Radio->Download from Radio
+- Select the new COM/ttyACM port and start
+
