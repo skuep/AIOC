@@ -11,7 +11,7 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 - Digital mode interface (similar to digirig)
 - Programming Cable Function via virtual Serial Port
 - Compact form-factor (DIY molded enclosure TBD)
-- Based on easy-to-handle STM32F302 using internal ADC/DAC (you can program these without any additional tools using [DFU](#how-to-program)
+- Based on easy-to-handle STM32F302 with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
 - Tested with Wouxun UV-9D Mate and Baofeng UV-5R
 - Works with Direwolf (Notes on APRSdroid [below](#notes-on-aprsdroid))
 
@@ -49,10 +49,11 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 ## How To Program
 - Short outermost pins on the programming header. This will set the device into bootloader mode in the next step.
 - Connect USB-C cable to the AIOC PCB
-- Use a tool like dfu-util to program the Release Binary like this (see more information at https://yeswolf.github.io/dfu/):
+- Use a tool like ``dfu-util`` to program the Release Binary like this:
   ````
   dfu-util -a 0 -s 0x08000000 -D aioc-fw.bin
   ````
+  __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb is installed on your system).
 - Unplug and replug the device, it should now enumerate as the AIOC device
 
 ## How To use with Direwolf for APRS
