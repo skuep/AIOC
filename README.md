@@ -22,6 +22,22 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
+## How To Fab
+- Go to JLCPCB.com and upload the GERBER-k1-aioc.zip package (under ``kicad/k1-aioc/jlcpcb``)
+  - Select PCB Thickness 1.2mm (that is what I recommend with the TRS connectors I used)
+  - You may want to select LeadFree HASL
+  - Select Silkscreen/Soldermask color to your liking
+- Check "PCB Assembly"
+  - PCBA Type "Economic"
+  - Assembly Side "Top Side"
+  - Tooling Holes "Added by Customer"
+  - Press Confirm
+  - Click "Add BOM File" and upload ``BOM-k1-aioc.csv``
+  - Click "Add CPL File" and upload ``POS-k1-aioc.csv``
+  - Press Next
+  - Look Through components, see if something is missing or problematic and press Next
+  - Check everything looks good and Save to Cart
+
 
 ## How To Build
 - You need to use Monacor PG-204P and PG-203P or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection)
