@@ -13,7 +13,7 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 - Compact form-factor (DIY molded enclosure TBD)
 - Based on easy-to-handle STM32F302 using internal ADC/DAC (you can program these without any additional tools using [DFU](#how-to-program)
 - Tested with Wouxun UV-9D Mate and Baofeng UV-5R
-- Should theoretically work with APRSdroid on Android see [below](#notes-on-aprsdroid)
+- Works with Direwolf (Notes on APRSdroid [below](#notes-on-aprsdroid))
 
 ## Future Work ##
 - Enclosure (DIY using 3D-Printed mold and Resin)
