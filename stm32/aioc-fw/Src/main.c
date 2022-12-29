@@ -108,9 +108,11 @@ int main(void)
             usb_audio_bufstats_t buf;
             USB_AudioGetSpeakerBufferStats(&buf);
 
+#if 0
             printf("buf: (%d/%d/%d) fb: (%06lX/%06lX/%06lX)\n",
                     buf.bufLevelMin, buf.bufLevelMax, buf.bufLevelAvg,
                     fb.feedbackMin, fb.feedbackMax, fb.feedbackAvg);
+#endif
         }
     }
 
