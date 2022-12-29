@@ -6,7 +6,7 @@
 #include <math.h>
 
 /* The one and only supported sample rate */
-#define AUDIO_SAMPLE_RATE   48000
+#define DEFAULT_SAMPLE_RATE   	48000
 /* This is feedback average responsivity with a denominator of 65536 */
 #define SPEAKER_FEEDBACK_AVG    32
 /* This is buffer level average responsivity with a denominator of 65536 */
@@ -14,7 +14,14 @@
 /* This is the amount of buffer level to feedback coupling with a denominator of 65536 to prevent buffer drift */
 #define SPEAKER_BUFLVL_FB_COUPLING 1
 /* We try to stay on this target with the buffer level */
-#define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB */
+#define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB and maximum sample rate */
+
+typedef enum {
+    SAMPLERATE_48000,
+    SAMPLERATE_24000,
+    SAMPLERATE_22050, /* For APRSdroid support. NOTE: Has approx. 90 ppm of clock frequency error (ca. 22052 Hz) */
+    SAMPLERATE_COUNT /* Has to be last element */
+} samplerate_t;
 
 typedef enum {
     STATE_OFF,
@@ -23,6 +30,7 @@ typedef enum {
 } state_t;
 
 /* Various state variables. N+1 because 0 is always the master channel */
+static volatile uint32_t sampleFreqCfg; /* Actually configured sample rate. May be different for odd sample rates */
 static volatile state_t microphoneState = STATE_OFF;
 static volatile state_t speakerState = STATE_OFF;
 static bool microphoneMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];
@@ -37,6 +45,21 @@ static uint32_t speakerFeedbackMax;
 static uint32_t speakerBufferLvlAvg; /* 16.16 format */
 static uint16_t speakerBufferLvlMin;
 static uint16_t speakerBufferLvlMax;
+
+static uint32_t sampleFreqCur = DEFAULT_SAMPLE_RATE;
+static audio_control_range_4_n_t(SAMPLERATE_COUNT) sampleFreqRng = {
+    .wNumSubRanges = SAMPLERATE_COUNT,
+    .subrange = {
+        [SAMPLERATE_48000] = {.bMin = 48000, .bMax = 48000, .bRes = 0},
+        [SAMPLERATE_24000] = {.bMin = 24000, .bMax = 24000, .bRes = 0},
+        [SAMPLERATE_22050] = {.bMin = 22050, .bMax = 22050, .bRes = 0},
+    }
+};
+
+/* Prototypes of static functions */
+static void Timer_Init(void);
+static void ADC_Init(void);
+static void DAC_Init(void);
 
 //--------------------------------------------------------------------+
 // Application Callback API Implementations
@@ -80,7 +103,7 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         microphoneLinVolume[channelNum] = (microphoneLogVolume[channelNum] != 0x8000) ?
                 (uint16_t) (65535 * pow(10, logVolume/20) + 0.5) : 0; /* log to linear with rounding */
 
-        TU_LOG2("    Set Volume: %f dB of channel: %u\r\n", logVolume, channelNum);
+        TU_LOG2("    Set Volume: %u.%u dB of channel: %u\r\n", microphoneLogVolume[channelNum] / 256, microphoneLogVolume[channelNum] % 256, channelNum);
       return true;
 
         // Unknown/Unsupported control
@@ -113,13 +136,44 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         speakerLinVolume[channelNum] = (speakerLogVolume[channelNum] != 0x8000) ?
                 (uint16_t) (65535 * pow(10, logVolume/20) + 0.5) : 0; /* log to linear with rounding */
 
-        TU_LOG2("    Set Volume: %f dB of channel: %u\r\n", logVolume, channelNum);
+        TU_LOG2("    Set Volume: %u.%u dB of channel: %u\r\n", microphoneLogVolume[channelNum] / 256, microphoneLogVolume[channelNum] % 256, channelNum);
       return true;
 
         // Unknown/Unsupported control
       default:
         TU_BREAKPOINT();
       return false;
+    }
+  }
+
+  if ( entityID == AUDIO_CTRL_ID_CLOCK )
+  {
+    switch ( ctrlSel )
+    {
+      case AUDIO_CS_CTRL_SAM_FREQ:
+        // channelNum is always zero in this case
+        switch ( p_request->bRequest )
+        {
+          case AUDIO_CS_REQ_CUR:
+            TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_4_t));
+            sampleFreqCur = ((audio_control_cur_4_t*) pBuff)->bCur;
+            TU_LOG2("    Set Sample Freq: %lu\r\n", sampleFreqCur);
+
+            Timer_Init();
+
+            return true;
+
+          // Unknown/Unsupported control
+          default:
+            TU_BREAKPOINT();
+            return false;
+        }
+      break;
+
+      // Unknown/Unsupported control
+      default:
+        TU_BREAKPOINT();
+        return false;
     }
   }
 
@@ -313,20 +367,10 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         {
           case AUDIO_CS_REQ_CUR:
             TU_LOG2("    Get Sample Freq.\r\n");
-            uint32_t sampFreq = AUDIO_SAMPLE_RATE;
-            return tud_control_xfer(rhport, p_request, &sampFreq, sizeof(sampFreq));
+            return tud_control_xfer(rhport, p_request, &sampleFreqCur, sizeof(sampleFreqCur));
 
           case AUDIO_CS_REQ_RANGE:
             TU_LOG2("    Get Sample Freq. range\r\n");
-            audio_control_range_4_n_t(1) sampleFreqRng = {
-                .wNumSubRanges = 1,
-                .subrange[0] = {
-                    .bMin = AUDIO_SAMPLE_RATE,
-                    .bMax = AUDIO_SAMPLE_RATE,
-                    .bRes = 0
-                }
-            };
-
             return tud_control_xfer(rhport, p_request, &sampleFreqRng, sizeof(sampleFreqRng));
 
            // Unknown/Unsupported control
@@ -458,7 +502,7 @@ void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedba
 {
     /* Configure parameters for feedback endpoint */
     feedback_param->frequency.mclk_freq = USB_SOF_TIMER_HZ;
-    feedback_param->sample_freq = AUDIO_SAMPLE_RATE;
+    feedback_param->sample_freq = sampleFreqCfg;
     feedback_param->method = AUDIO_FEEDBACK_METHOD_FREQUENCY_FIXED;
 }
 
@@ -466,6 +510,7 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
 {
     static uint32_t prev_cycles = 0;
     uint32_t this_cycles = USB_SOF_TIMER_CCR; /* Load from capture register, which is set in tu_stm32_sof_cb */
+    uint32_t sampleFreq = sampleFreqCfg;
     uint32_t feedback;
 
     /* Calculate number of master clock cycles between now and last call */
@@ -475,11 +520,11 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     prev_cycles = this_cycles;
 
     /* Calculate the feedback value, taken from tinyusb stack */
-    uint64_t fb64 = (((uint64_t) cycles) * AUDIO_SAMPLE_RATE) << 16;
+    uint64_t fb64 = (((uint64_t) cycles) * sampleFreq) << 16;
     feedback = (uint32_t) (fb64 / USB_SOF_TIMER_HZ);
 
-    uint32_t min_value = (AUDIO_SAMPLE_RATE/1000 - 1) << 16; /* 1000 for full-speed USB */
-    uint32_t max_value = (AUDIO_SAMPLE_RATE/1000 + 1) << 16;
+    uint32_t min_value = (sampleFreq/1000 - 1) << 16; /* 1000 for full-speed USB */
+    uint32_t max_value = (sampleFreq/1000 + 1) << 16;
 
     /* Couple the buffer level bias to the feedback value to avoid buffer drift */
     if (speakerState == STATE_RUN) {
@@ -576,13 +621,22 @@ static void GPIO_Init(void)
 
 static void Timer_Init(void)
 {
+	/* Calculate clock rate divider for requested sample rate with rounding */
+	uint32_t timerFreq = 2 * HAL_RCC_GetPCLK1Freq();
+	uint32_t rateDivider = (timerFreq + sampleFreqCur / 2) / sampleFreqCur;
+
+	/* Store actually realized samplerate for feedback algorithm to use */
+	sampleFreqCfg = timerFreq / rateDivider;
+
+	/* Enable clock and (re-) initialize timer */
     __HAL_RCC_TIM3_CLK_ENABLE();
     /* TODO: Use TIM6? */
     /* TIM3_TRGO triggers ADC2 */
+    TIM3->CR1 &= ~TIM_CR1_CEN;
     TIM3->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
     TIM3->CR2 = TIM_TRGO_UPDATE;
     TIM3->PSC = 0;
-    TIM3->ARR = (2 * HAL_RCC_GetPCLK1Freq() / AUDIO_SAMPLE_RATE) - 1;
+    TIM3->ARR = rateDivider - 1;
     TIM3->EGR = TIM_EGR_UG;
 #if 1 /* Output sample rate on compare channel 3 */
     TIM3->CCMR2 =  TIM_OCMODE_PWM1 | TIM_CCMR2_OC3PE;
@@ -638,7 +692,7 @@ static void ADC_Init(void)
     NVIC_SetPriority(ADC1_2_IRQn, AIOC_IRQ_PRIO_AUDIO);
 }
 
-void DAC_Init(void)
+static void DAC_Init(void)
 {
     __HAL_RCC_DAC1_CLK_ENABLE();
 
