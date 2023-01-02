@@ -1,5 +1,5 @@
 # AIOC
-This is the Ham Radio *All-in-one-Cable*. 
+This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!**
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
