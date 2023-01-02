@@ -11,7 +11,7 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 - Digital mode interface (similar to digirig)
 - Programming Cable Function via virtual Serial Port
 - Compact form-factor (DIY molded enclosure TBD)
-- Based on easy-to-handle STM32F302 with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
+- Based on easy-to-hack STM32F302 with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
 - Tested with Wouxun UV-9D Mate and Baofeng UV-5R
 - Works with Direwolf (Notes on APRSdroid [below](#notes-on-aprsdroid))
 
@@ -54,7 +54,7 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
   dfu-util -a 0 -s 0x08000000 -D aioc-fw.bin
   ````
   __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb is installed on your system).
-- Unplug and replug the device, it should now enumerate as the AIOC device
+- Remove short from first step, unplug and replug the device, it should now enumerate as the AIOC device
 
 ## How To use with Direwolf for APRS
 - Follow the regular setup guide with direwolf to determine the correct audio device to use
@@ -77,6 +77,6 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 Although theoretically not an issue, currently APRSdroid is not supported due to the following two issues:
 - According to https://github.com/ge0rg/aprsdroid/issues/156 the sample-rate is fixed to 22050 Hz. 
   Currently, only 48000 Hz is supported by the AIOC (and 24000 Hz or 12000 Hz would be possible to implement). 
-  However the required hard-coded 22050 Hz would require a different timebase or resampling and is thus not possible unfortunately
+  However it should be possible to also support 22050 Hz although with an approximate frequency error of 90ppm (which however should be fine for APRS)
 - Currently APRSdroid does not support any PTT control via a serial interface. See https://github.com/ge0rg/aprsdroid/issues/324
   However my previous experience is, that the Android kernel brings support for ttyACM devices (which is perfect) so implementing this feature should be no problem.
