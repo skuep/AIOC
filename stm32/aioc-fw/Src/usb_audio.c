@@ -30,23 +30,25 @@ typedef enum {
 } state_t;
 
 /* Various state variables. N+1 because 0 is always the master channel */
-static volatile uint32_t sampleFreqCfg; /* Actually configured sample rate. May be different for odd sample rates */
-static volatile state_t microphoneState = STATE_OFF;
-static volatile state_t speakerState = STATE_OFF;
 static bool microphoneMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];
 static bool speakerMute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1];
 static int16_t microphoneLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX] = 0 }; /* in dB */
 static int16_t speakerLogVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 0 }; /* in dB */
 static uint16_t microphoneLinVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 65535 }; /* 0.16 format */
 static uint16_t speakerLinVolume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1] = { [0 ... CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX] = 65535 }; /* 0.16 format */
+static uint32_t microphoneSampleFreq = DEFAULT_SAMPLE_RATE; /* Current (requested) sample rate */
+static uint32_t speakerSampleFreq = DEFAULT_SAMPLE_RATE; /* Current (requested) sample rate */
 static uint64_t speakerFeedbackAvg; /* 32.32 format */
 static uint32_t speakerFeedbackMin;
 static uint32_t speakerFeedbackMax;
 static uint32_t speakerBufferLvlAvg; /* 16.16 format */
 static uint16_t speakerBufferLvlMin;
 static uint16_t speakerBufferLvlMax;
+static volatile uint32_t microphoneSampleFreqCfg; /* Actual configured sample rate in the timer hardware. May be different from requested for odd sample rates */
+static volatile uint32_t speakerSampleFreqCfg; /* Actual configured sample rate in the timer hardware. May be different from requested for odd sample rates */
+static volatile state_t microphoneState = STATE_OFF;
+static volatile state_t speakerState = STATE_OFF;
 
-static uint32_t sampleFreqCur = DEFAULT_SAMPLE_RATE;
 static audio_control_range_4_n_t(SAMPLERATE_COUNT) sampleFreqRng = {
     .wNumSubRanges = SAMPLERATE_COUNT,
     .subrange = {
@@ -57,7 +59,8 @@ static audio_control_range_4_n_t(SAMPLERATE_COUNT) sampleFreqRng = {
 };
 
 /* Prototypes of static functions */
-static void Timer_Init(void);
+static void Timer_ADC_Init(void);
+static void Timer_DAC_Init(void);
 static void ADC_Init(void);
 static void DAC_Init(void);
 
@@ -146,7 +149,7 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
     }
   }
 
-  if ( entityID == AUDIO_CTRL_ID_CLOCK )
+  if ( entityID == AUDIO_CTRL_ID_MIC_CLOCK )
   {
     switch ( ctrlSel )
     {
@@ -156,10 +159,41 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         {
           case AUDIO_CS_REQ_CUR:
             TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_4_t));
-            sampleFreqCur = ((audio_control_cur_4_t*) pBuff)->bCur;
-            TU_LOG2("    Set Sample Freq: %lu\r\n", sampleFreqCur);
+            microphoneSampleFreq = ((audio_control_cur_4_t*) pBuff)->bCur;
+            TU_LOG2("    Set Mic. Sample Freq: %lu\r\n", microphoneSampleFreq);
 
-            Timer_Init();
+            Timer_ADC_Init();
+
+            return true;
+
+          // Unknown/Unsupported control
+          default:
+            TU_BREAKPOINT();
+            return false;
+        }
+      break;
+
+      // Unknown/Unsupported control
+      default:
+        TU_BREAKPOINT();
+        return false;
+    }
+  }
+
+  if ( entityID == AUDIO_CTRL_ID_SPK_CLOCK )
+  {
+    switch ( ctrlSel )
+    {
+      case AUDIO_CS_CTRL_SAM_FREQ:
+        // channelNum is always zero in this case
+        switch ( p_request->bRequest )
+        {
+          case AUDIO_CS_REQ_CUR:
+            TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_4_t));
+            speakerSampleFreq = ((audio_control_cur_4_t*) pBuff)->bCur;
+            TU_LOG2("    Set Spk. Sample Freq: %lu\r\n", speakerSampleFreq);
+
+            Timer_DAC_Init();
 
             return true;
 
@@ -357,7 +391,7 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
   }
 
   // Clock Source unit
-  if ( entityID == AUDIO_CTRL_ID_CLOCK )
+  if ( entityID == AUDIO_CTRL_ID_MIC_CLOCK )
   {
     switch ( ctrlSel )
     {
@@ -366,11 +400,11 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         switch ( p_request->bRequest )
         {
           case AUDIO_CS_REQ_CUR:
-            TU_LOG2("    Get Sample Freq.\r\n");
-            return tud_control_xfer(rhport, p_request, &sampleFreqCur, sizeof(sampleFreqCur));
+            TU_LOG2("    Get Mic. Sample Freq.\r\n");
+            return tud_control_xfer(rhport, p_request, &microphoneSampleFreq, sizeof(microphoneSampleFreq));
 
           case AUDIO_CS_REQ_RANGE:
-            TU_LOG2("    Get Sample Freq. range\r\n");
+            TU_LOG2("    Get Mic. Sample Freq. range\r\n");
             return tud_control_xfer(rhport, p_request, &sampleFreqRng, sizeof(sampleFreqRng));
 
            // Unknown/Unsupported control
@@ -382,7 +416,45 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 
       case AUDIO_CS_CTRL_CLK_VALID:
         // Only cur attribute exists for this request
-        TU_LOG2("    Get Sample Freq. valid\r\n");
+        TU_LOG2("    Get Mic Sample Freq. valid\r\n");
+
+        uint8_t clkValid = 1;
+        return tud_control_xfer(rhport, p_request, &clkValid, sizeof(clkValid));
+
+      // Unknown/Unsupported control
+      default:
+        TU_BREAKPOINT();
+        return false;
+    }
+  }
+
+  // Clock Source unit
+  if ( entityID == AUDIO_CTRL_ID_SPK_CLOCK )
+  {
+    switch ( ctrlSel )
+    {
+      case AUDIO_CS_CTRL_SAM_FREQ:
+        // channelNum is always zero in this case
+        switch ( p_request->bRequest )
+        {
+          case AUDIO_CS_REQ_CUR:
+            TU_LOG2("    Get Spk. Sample Freq.\r\n");
+            return tud_control_xfer(rhport, p_request, &speakerSampleFreq, sizeof(speakerSampleFreq));
+
+          case AUDIO_CS_REQ_RANGE:
+            TU_LOG2("    Get Spk. Sample Freq. range\r\n");
+            return tud_control_xfer(rhport, p_request, &sampleFreqRng, sizeof(sampleFreqRng));
+
+           // Unknown/Unsupported control
+          default:
+            TU_BREAKPOINT();
+            return false;
+        }
+      break;
+
+      case AUDIO_CS_CTRL_CLK_VALID:
+        // Only cur attribute exists for this request
+        TU_LOG2("    Get Spk. Sample Freq. valid\r\n");
 
         uint8_t clkValid = 1;
         return tud_control_xfer(rhport, p_request, &clkValid, sizeof(clkValid));
@@ -418,7 +490,7 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
     /* Get number of total bytes available in FIFO */
     uint16_t count = tud_audio_available();
 
-    /* Calculate min/max/average of buffer fill level */
+    /* Calculate min/max/average statistics of buffer fill level */
     if ( (count - n_bytes_received) < speakerBufferLvlMin) speakerBufferLvlMin = count - n_bytes_received;
     if ( count > speakerBufferLvlMax) speakerBufferLvlMax = count;
     speakerBufferLvlAvg = ((uint64_t) speakerBufferLvlAvg * (65536 - SPEAKER_BUFFERLVL_AVG) + ((uint64_t) count << 16) * SPEAKER_BUFFERLVL_AVG) / 65536.0;
@@ -427,7 +499,7 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
         if (count >= SPEAKER_BUFFERLVL_TARGET) {
             /* Wait until whe are at buffer target fill level, then start DAC output */
             speakerState = STATE_RUN;
-            NVIC_EnableIRQ(TIM3_IRQn);
+            NVIC_EnableIRQ(TIM6_DAC1_IRQn);
         }
 
         /* Initialize/override min/max/avg during startup buffering */
@@ -486,7 +558,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
 
     case ITF_NUM_AUDIO_STREAMING_OUT:
         /* Speaker channel has been stopped */
-        NVIC_DisableIRQ(TIM3_IRQn);
+        NVIC_DisableIRQ(TIM6_DAC1_IRQn);
         speakerState = STATE_OFF;
         break;
 
@@ -502,7 +574,7 @@ void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedba
 {
     /* Configure parameters for feedback endpoint */
     feedback_param->frequency.mclk_freq = USB_SOF_TIMER_HZ;
-    feedback_param->sample_freq = sampleFreqCfg;
+    feedback_param->sample_freq = speakerSampleFreqCfg;
     feedback_param->method = AUDIO_FEEDBACK_METHOD_FREQUENCY_FIXED;
 }
 
@@ -510,7 +582,6 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
 {
     static uint32_t prev_cycles = 0;
     uint32_t this_cycles = USB_SOF_TIMER_CCR; /* Load from capture register, which is set in tu_stm32_sof_cb */
-    uint32_t sampleFreq = sampleFreqCfg;
     uint32_t feedback;
 
     /* Calculate number of master clock cycles between now and last call */
@@ -520,17 +591,21 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     prev_cycles = this_cycles;
 
     /* Calculate the feedback value, taken from tinyusb stack */
-    uint64_t fb64 = (((uint64_t) cycles) * sampleFreq) << 16;
+    uint64_t fb64 = (((uint64_t) cycles) * speakerSampleFreqCfg) << 16;
     feedback = (uint32_t) (fb64 / USB_SOF_TIMER_HZ);
-
-    uint32_t min_value = (sampleFreq/1000 - 1) << 16; /* 1000 for full-speed USB */
-    uint32_t max_value = (sampleFreq/1000 + 1) << 16;
 
     /* Couple the buffer level bias to the feedback value to avoid buffer drift */
     if (speakerState == STATE_RUN) {
         int32_t bias = (int32_t) speakerBufferLvlAvg - ((int32_t) SPEAKER_BUFFERLVL_TARGET << 16); /* 16.16 format same as feedback */
         feedback -= ((int64_t) bias * SPEAKER_BUFLVL_FB_COUPLING) / 65536;
     }
+
+    /* The size of isochronous packets created by the device must be within the limits specified in FMT-2.0 section 2.3.1.1.
+     * This means that the deviation of actual packet size from nominal size must not exceed +/- one audio slot
+     * (audio slot = channel count samples). */
+    uint32_t sampleFreq = speakerSampleFreq;
+    uint32_t min_value = (sampleFreq/1000 - 1) << 16; /* 1000 for full-speed USB */
+    uint32_t max_value = (sampleFreq/1000 + 1) << 16;
 
     /* Limit */
     if ( feedback > max_value ) feedback = max_value;
@@ -539,7 +614,7 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     /* Send to host */
     tud_audio_n_fb_set(func_id, feedback);
 
-    /* Handle min/max/avg */
+    /* Handle min/max/avg statistics */
     if (feedback < speakerFeedbackMin) speakerFeedbackMin = feedback;
     if (feedback > speakerFeedbackMax) speakerFeedbackMax = feedback;
     speakerFeedbackAvg = (speakerFeedbackAvg * (65536 - SPEAKER_FEEDBACK_AVG) + ((uint64_t) feedback << 16) * SPEAKER_FEEDBACK_AVG) / 65536.0;
@@ -570,10 +645,10 @@ void ADC1_2_IRQHandler (void)
     }
 }
 
-void TIM3_IRQHandler(void)
+void TIM6_DAC_IRQHandler(void)
 {
-    if (TIM3->SR & TIM_SR_UIF) {
-        TIM3->SR = (uint32_t) ~TIM_SR_UIF;
+    if (TIM6->SR & TIM_SR_UIF) {
+        TIM6->SR = (uint32_t) ~TIM_SR_UIF;
         int16_t sample = 0x0000;
 
         /* Read from FIFO, leave sample at 0 if fifo empty */
@@ -619,18 +694,18 @@ static void GPIO_Init(void)
     HAL_GPIO_Init(GPIOA, &DACOutGpio);
 }
 
-static void Timer_Init(void)
+static void Timer_ADC_Init(void)
 {
 	/* Calculate clock rate divider for requested sample rate with rounding */
-	uint32_t timerFreq = 2 * HAL_RCC_GetPCLK1Freq();
-	uint32_t rateDivider = (timerFreq + sampleFreqCur / 2) / sampleFreqCur;
+	uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK1Freq()) ? HAL_RCC_GetPCLK1Freq() : 2 * HAL_RCC_GetPCLK1Freq();
+	uint32_t rateDivider = (timerFreq + microphoneSampleFreq / 2) / microphoneSampleFreq;
 
-	/* Store actually realized samplerate for feedback algorithm to use */
-	sampleFreqCfg = timerFreq / rateDivider;
+	/* Store actually realized samplerate */
+	microphoneSampleFreqCfg = timerFreq / rateDivider;
 
 	/* Enable clock and (re-) initialize timer */
     __HAL_RCC_TIM3_CLK_ENABLE();
-    /* TODO: Use TIM6? */
+
     /* TIM3_TRGO triggers ADC2 */
     TIM3->CR1 &= ~TIM_CR1_CEN;
     TIM3->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -641,12 +716,35 @@ static void Timer_Init(void)
 #if 1 /* Output sample rate on compare channel 3 */
     TIM3->CCMR2 =  TIM_OCMODE_PWM1 | TIM_CCMR2_OC3PE;
     TIM3->CCER = (0 << TIM_CCER_CC3P_Pos) | TIM_CCER_CC3E;
-    TIM3->CCR3 = 500;
+    TIM3->CCR3 = rateDivider/2 - 1;
 #endif
-    TIM3->DIER = TIM_DIER_UIE;
     TIM3->CR1 |= TIM_CR1_CEN;
+}
 
-    NVIC_SetPriority(TIM3_IRQn, AIOC_IRQ_PRIO_AUDIO);
+static void Timer_DAC_Init(void)
+{
+    /* Calculate clock rate divider for requested sample rate with rounding */
+    uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK1Freq()) ? HAL_RCC_GetPCLK1Freq() : 2 * HAL_RCC_GetPCLK1Freq();
+    uint32_t rateDivider = (timerFreq + speakerSampleFreq / 2) / speakerSampleFreq;
+
+    /* Store actually realized samplerate for feedback algorithm to use */
+    speakerSampleFreqCfg = timerFreq / rateDivider;
+
+    /* Enable clock and (re-) initialize timer */
+    __HAL_RCC_TIM6_CLK_ENABLE();
+
+    /* TIM6_TRGO triggers DAC */
+    TIM6->CR1 &= ~TIM_CR1_CEN;
+    TIM6->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
+    TIM6->CR2 = TIM_TRGO_UPDATE;
+    TIM6->PSC = 0;
+    TIM6->ARR = rateDivider - 1;
+    TIM6->EGR = TIM_EGR_UG;
+
+    TIM6->DIER = TIM_DIER_UIE;
+    TIM6->CR1 |= TIM_CR1_CEN;
+
+    NVIC_SetPriority(TIM6_DAC1_IRQn, AIOC_IRQ_PRIO_AUDIO);
 }
 
 static void ADC_Init(void)
@@ -696,16 +794,15 @@ static void DAC_Init(void)
 {
     __HAL_RCC_DAC1_CLK_ENABLE();
 
-    /* TSEL1 == TIM3 trigger */
-    __HAL_REMAPTRIGGER_ENABLE(HAL_REMAPTRIGGER_DAC1_TRIG);
-
-    DAC->CR = (0x1 << DAC_CR_TSEL1_Pos) | DAC_CR_TEN1 | DAC_CR_EN1;
+    /* Select TIM6 TRGO as trigger and enable DAC */
+    DAC->CR = (0x0 << DAC_CR_TSEL1_Pos) | DAC_CR_TEN1 | DAC_CR_EN1;
 }
 
 void USB_AudioInit(void)
 {
     GPIO_Init();
-    Timer_Init();
+    Timer_ADC_Init();
+    Timer_DAC_Init();
     ADC_Init();
     DAC_Init();
 }
