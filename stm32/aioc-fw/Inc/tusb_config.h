@@ -41,7 +41,7 @@
 
 // RHPort max operational speed can defined by board.mk
 #ifndef BOARD_TUD_MAX_SPEED
-#define BOARD_TUD_MAX_SPEED   OPT_MODE_DEFAULT_SPEED
+#define BOARD_TUD_MAX_SPEED   OPT_MODE_FULL_SPEED
 #endif
 
 #ifndef MAX_EP_COUNT
@@ -121,9 +121,9 @@
 #define CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE                       2
 #define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX                            1
 #define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX                            1
-#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX                            CFG_TUD_AUDIO_EP_SZ_OUT + CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE
+#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX                            CFG_TUD_AUDIO_EP_SZ_OUT + CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX
 #define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ                         1024 /* FIFO not being power of 2 seem to result in all kinds of BusFaults? */
-#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX                             CFG_TUD_AUDIO_EP_SZ_IN + CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE
+#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX                             CFG_TUD_AUDIO_EP_SZ_IN + CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ                          1024
 
 #define CFG_TUD_AUDIO_EP_SZ_IN                                        (48) * CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE * CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX      // 48 Samples (48 kHz) x 2 Bytes/Sample x 1 Channel
