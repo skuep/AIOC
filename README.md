@@ -1,5 +1,5 @@
 # AIOC
-This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!**
+This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!**. Please read this README carefully before ordering anything.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
@@ -8,15 +8,19 @@ The AIOC is a small adapter with a USB-C connector that enumerates itself as a s
 and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Talk).
 
 ## Features ##
-- Digital mode interface (similar to digirig)
+- Cheap & Hackable Digital mode USB interface (similar to digirig, mobilinkd, etc...)
 - Programming Cable Function via virtual Serial Port
-- Compact form-factor (DIY molded enclosure TBD)
+- Compact form-factor (DIY overmolded enclosure is currently TBD)
 - Based on easy-to-hack STM32F302 with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
 - Tested with Wouxun UV-9D Mate and Baofeng UV-5R
-- Works with Direwolf (Notes on APRSdroid [below](#notes-on-aprsdroid))
+- Can support Dual-PTT HTs
+- Supports at least:
+  - [Direwolf](#notes-on-direwolf) as AX.25 modem/APRS en+decoder/...
+  - [APRSdroid](#notes-on-aprsdroid) as APRS en+decoder
+  - [CHIRP](#notes-on-chirp) for programming
 
 ## Future Work ##
-- Enclosure (DIY using 3D-Printed mold and Resin)
+- Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
 - Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
 - Maybe change the USB-C connector type due to sporadic connection issues with JLCPCB's SMT reflow process
 
@@ -36,13 +40,17 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
   - Click "Add CPL File" and upload ``POS-k1-aioc.csv``
   - Press Next
   - Look Through components, see if something is missing or problematic and press Next
-  - Check everything looks good and Save to Cart
+  - Check everything looks roughly good (rotations are already baked-in and should be correct). Save to Cart
 
+This gives you 5 (or more) SMD assembled AIOC. The only thing left to do is soldering on the TRS connectors (see [here](#how-to-build)).
+The total bill should be around 60$ US for 5 pieces plus tax and shipping from China.
 
 ## How To Build
+This is the process I use for building. See photographs in ``images`` folder.
 - You need to use Monacor PG-204P and PG-203P or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection)
 - Cut the 2.5mm and 3.5mm TRS sleeve tab where the hole is located
 - Put both TRS connectors into the solder guide (or a cheap HT that you don't mind potentially damaging). Make sure, that they are seated all the way in
+- Insert the AIOC PCB into the solder guide
 - Solder sleeve tab on the back side for both TRS connectors first
 - Turn around PCB and solder remaining solder lugs
 
@@ -56,7 +64,17 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
   __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb is installed on your system).
 - Remove short from first step, unplug and replug the device, it should now enumerate as the AIOC device
 
-## How To use with Direwolf for APRS
+## How To Use
+The serial interface of the AIOC enumerates as a regular COM (Windows) or ttyACM port (Linux) and can be used as such for programming the radio as well as PTT (Asserted on RTS=1 and DTR=0).
+
+The soundcard interface of the AIOC gives access to the audio data channels. It has one mono microphone channel and one mono speaker channel and currently supports the following baudrates:
+  - 48000 Hz (preferred)
+  - 24000 Hz
+  - 22050 Hz (specifically for APRSdroid, has approx. 90 ppm of frequency error)
+
+USB HID based PTT control (and general configuration of the AIOC) is currently on the idea list. For further discussion go to GitHub issues.
+
+## Notes on Direwolf
 - Follow the regular setup guide with direwolf to determine the correct audio device to use
 - Configure the device as follows
   ````
@@ -64,19 +82,30 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
   ADEVICE  plughw:<x>,0
   ARATE 48000
   [...]
-  PTT /dev/ttyACM0 RTS -DTR
+  PTT <port> RTS -DTR
   [...]
   ````
 
-## How To use with CHIRP for programming
-- Start CHIRP
-- Select Radio->Download from Radio
-- Select the new COM/ttyACM port and start
-
 ## Notes on APRSdroid
-Although theoretically not an issue, currently APRSdroid is not supported due to the following two issues:
-- According to https://github.com/ge0rg/aprsdroid/issues/156 the sample-rate is fixed to 22050 Hz. 
-  Currently, only 48000 Hz is supported by the AIOC (and 24000 Hz or 12000 Hz would be possible to implement). 
-  However it should be possible to also support 22050 Hz although with an approximate frequency error of 90ppm (which however should be fine for APRS)
-- Currently APRSdroid does not support any PTT control via a serial interface. See https://github.com/ge0rg/aprsdroid/issues/324
-  However my previous experience is, that the Android kernel brings support for ttyACM devices (which is perfect) so implementing this feature should be no problem.
+APRSdroid support has been added by AIOC by implementing support for the fixed 22050 Hz sample rate that APRSdroid requires. 
+It is important to notice, that the exact sample rate can not be achieved by the hardware, due to the 8 MHz crystal. 
+The actual sample rate used is 22052 Hz (which represents around 90 ppm of error). From my testing this does not seem to be a problem for APRS at all.
+
+However, since APRSdroid does not have any PTT control, sending data is currently not possible using the AIOC. See https://github.com/ge0rg/aprsdroid/issues/324.
+My previous experience is, that the Android kernel brings support for ttyACM devices (which is perfect for the AIOC) so implementing this feature for APRSdroid should theoretically be no problem.
+
+Ideas such as implementing a digital-modes-spefic VOX-emulation to workaround this problem and let the AIOC activate the PTT automatically are currently being considered. 
+Voice your opinion and ideas in the GitHub issues if this seems interesting to you.
+
+## Notes on CHIRP
+CHIRP is a very popuplar open-source programming software that supports a very wide array of HT radios. You can use CHIRP just as you would like with a regular programming cable.
+
+Download:
+  - Start CHIRP
+  - Select Radio->Download from Radio
+  - Select the AIOC COM/ttyACM port and start
+
+Upload:
+  - Select Radio->Upload to Radio
+  - That's it
+
