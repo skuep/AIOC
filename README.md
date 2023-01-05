@@ -1,5 +1,5 @@
 # AIOC
-This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!**. Please read this README carefully before ordering anything.
+This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!** Please read this README carefully before ordering anything.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
@@ -22,8 +22,8 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 ## Future Work ##
 - Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
 - Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
-- "High-Performance" VOX emulation with advanced features (e.g. pre-triggered VOX to activate PTT before the threshold was crossed, possible because of the internal buffer)
-- HID (maybe CM108) compatible PTT control
+- "High-Performance" VOX emulation with advanced features (e.g. pre-triggered VOX to activate PTT a few milliseconds before data, reduced tail time)
+- HID (maybe CM108 compatible) PTT control
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
