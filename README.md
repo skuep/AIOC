@@ -22,7 +22,8 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 ## Future Work ##
 - Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
 - Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
-- Maybe change the USB-C connector type due to sporadic connection issues with JLCPCB's SMT reflow process
+- "High-Performance" VOX emulation with advanced features (e.g. pre-triggered VOX to activate PTT before the threshold was crossed, possible because of the internal buffer)
+- HID (maybe CM108) compatible PTT control
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
