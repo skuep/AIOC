@@ -202,6 +202,16 @@ void USB_SerialInit(void)
     };
     HAL_GPIO_Init(USB_SERIAL_UART_GPIO, &RtsDtrGpio);
 
+    /* Errata 2.11.5 When PCLK is selected as clock source for USART1, PCLK1 is used instead of PCLK2.
+     *  To reach 9 Mbaud, System Clock (SYSCLK) should be selected as USART1 clock source. */
+    RCC_PeriphCLKInitTypeDef PeriphClk = {
+        .PeriphClockSelection = RCC_PERIPHCLK_USART1,
+        .Usart1ClockSelection = RCC_USART1CLKSOURCE_SYSCLK
+    };
+
+    HAL_StatusTypeDef status = HAL_RCCEx_PeriphCLKConfig(&PeriphClk);
+    TU_ASSERT(status == HAL_OK, /**/);
+
     /* Initialize UART */
     __HAL_RCC_USART1_CLK_ENABLE();
     USB_SERIAL_UART->CR1 = USART_CR1_RTOIE | UART_OVERSAMPLING_16 | UART_WORDLENGTH_8B
