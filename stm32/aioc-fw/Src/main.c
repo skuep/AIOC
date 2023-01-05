@@ -14,10 +14,6 @@ static void SystemClock_Config(void)
         .OscillatorType = RCC_OSCILLATORTYPE_HSE,
         .HSEState = RCC_HSE_ON,
         .HSEPredivValue = RCC_HSE_PREDIV_DIV1,
-        .LSEState = RCC_LSE_OFF,
-        .HSIState = RCC_HSI_OFF,
-        .HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT,
-        .LSIState = RCC_LSI_ON,
         .PLL = {
             .PLLState = RCC_PLL_ON,
             .PLLSource = RCC_CFGR_PLLSRC_HSE_PREDIV,
