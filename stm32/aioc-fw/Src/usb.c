@@ -7,7 +7,8 @@
 
 // We have ISOCHRONOUS endpoints defined that share the same endpoint number, but have opposing directions.
 // However with STM32 hardware, ISOCHRONOUS endpoints use both RX and TX structures of the same endpoint register in hardware
-// We circumvent a clash by defining our own custom endpoint map for the tiny usb stack
+// We circumvent a clash by defining our own custom endpoint map for the tiny usb stack.
+// This callback is probably not needed with new versions of tinyusb
 uint8_t tu_stm32_edpt_number_cb(uint8_t addr)
 {
     switch (addr) {
@@ -36,12 +37,6 @@ uint8_t tu_stm32_edpt_number_cb(uint8_t addr)
         TU_BREAKPOINT();
         return 0x00;
     }
-}
-
-void tu_stm32_sof_cb(void)
-{
-    /* Capture timer value */
-    USB_SOF_TIMER->EGR = TIM_EGR_CC1G;
 }
 
 // FIXME: Do all three need to be handled, or just the LP one?

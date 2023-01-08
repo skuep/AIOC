@@ -581,7 +581,7 @@ void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedba
 TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t frame_number, uint8_t interval_shift)
 {
     static uint32_t prev_cycles = 0;
-    uint32_t this_cycles = USB_SOF_TIMER_CCR; /* Load from capture register, which is set in tu_stm32_sof_cb */
+    uint32_t this_cycles = USB_SOF_TIMER_CNT;
     uint32_t feedback;
 
     /* Calculate number of master clock cycles between now and last call */
