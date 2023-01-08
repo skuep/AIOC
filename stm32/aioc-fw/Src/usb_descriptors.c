@@ -164,7 +164,7 @@ static uint8_t ascii_to_utf16(uint8_t *buffer, uint32_t size, const char *str) {
 
 // Invoked when received GET STRING DESCRIPTOR request
 // Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
-const uint8_t * tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
+const uint16_t * tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     static uint8_t buffer[64];
     uint8_t *ptr = &buffer[2];
     uint8_t len = sizeof(buffer) - 2;
@@ -230,5 +230,5 @@ const uint8_t * tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     buffer[0] = len + 2;
     buffer[1] = TUSB_DESC_STRING;
 
-    return buffer;
+    return (void *) buffer;
 }
