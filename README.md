@@ -38,7 +38,7 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
   - Tooling Holes "Added by Customer"
   - Press Confirm
   - Click "Add BOM File" and upload ``BOM-k1-aioc.csv``
-  - Click "Add CPL File" and upload ``POS-k1-aioc.csv``
+  - Click "Add CPL File" and upload ``CPL-k1-aioc.csv``
   - Press Next
   - Look Through components, see if something is missing or problematic and press Next
   - Check everything looks roughly good (rotations are already baked-in and should be correct). Save to Cart
