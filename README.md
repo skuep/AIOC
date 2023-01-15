@@ -58,9 +58,9 @@ This is the process I use for building. See photographs in ``images`` folder.
 ## How To Program
 - Short outermost pins on the programming header. This will set the device into bootloader mode in the next step.
 - Connect USB-C cable to the AIOC PCB
-- Use a tool like ``dfu-util`` to program the Release Binary like this:
+- Use a tool like ``dfu-util`` to program the firmware binary from the GitHub Releases page like this:
   ````
-  dfu-util -a 0 -s 0x08000000 -D aioc-fw.bin
+  dfu-util -a 0 -s 0x08000000 -D aioc-fw-x-y-z.bin
   ````
   __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb is installed on your system).
 - Remove short from first step, unplug and replug the device, it should now enumerate as the AIOC device
