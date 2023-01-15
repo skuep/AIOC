@@ -27,16 +27,20 @@ enum USB_STRING_IDX {
     STR_IDX_AUDIOOUTCHAN,
 };
 
-#define USB_STRING_MANUFACTURER     "TinyUSB"
-#define USB_STRING_PRODUCT          "TinyUSB Device"
-#define USB_STRING_CDCITF           "TinyUSB CDC"
-#define USB_STRING_AUDIOITF         "TinyUSB Audio"
-#define USB_STRING_AUDIOIN          "TinyUSB Audio In"
-#define USB_STRING_AUDIOOUT         "TinyUSB Audio Out"
-#define USB_STRING_AUDIOINVOL       "TinyUSB Audio In Volume"
-#define USB_STRING_AUDIOOUTVOL      "TinyUSB Audio Out Volume"
-#define USB_STRING_AUDIOINCHAN      "TinyUSB Audio In Channel"
-#define USB_STRING_AUDIOOUTCHAN     "TinyUSB Audio Out CHannel"
+#define USB_VID                     0x1209
+#define USB_PID                     0x7388
+#define USB_BCD                     0x0200
+
+#define USB_STRING_MANUFACTURER     "AIOC"
+#define USB_STRING_PRODUCT          "All-In-One-Cable"
+#define USB_STRING_CDCITF           "AIOC CDC"
+#define USB_STRING_AUDIOITF         "AIOC Audio"
+#define USB_STRING_AUDIOIN          "AIOC Audio In"
+#define USB_STRING_AUDIOOUT         "AIOC Audio Out"
+#define USB_STRING_AUDIOINVOL       "AIOC Audio In Volume"
+#define USB_STRING_AUDIOOUTVOL      "AIOC Audio Out Volume"
+#define USB_STRING_AUDIOINCHAN      "AIOC Audio In Channel"
+#define USB_STRING_AUDIOOUTCHAN     "AIOC Audio Out CHannel"
 
 /* Endpoints */
 #define EPNUM_AUDIO_IN      0x81
