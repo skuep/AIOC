@@ -80,7 +80,8 @@ USB HID based PTT control (and general configuration of the AIOC) is currently o
 - Configure the device as follows
   ````
   [...]
-  ADEVICE  plughw:<x>,0
+  ADEVICE plughw:<x>,0  # <- Linux
+  ADEVICE x 0           # <- Windows
   ARATE 48000
   [...]
   PTT <port> RTS -DTR
