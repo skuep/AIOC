@@ -46,7 +46,7 @@ and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Ta
 This gives you 5 (or more) SMD assembled AIOC. The only thing left to do is soldering on the TRS connectors (see [here](#how-to-build)).
 The total bill should be around 60$ US for 5 pieces plus tax and shipping from China.
 
-## How To Build
+## How To Assemble
 This is the process I use for building. See photographs in ``images`` folder.
 - You need to use Monacor PG-204P and PG-203P or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection)
 - Cut the 2.5mm and 3.5mm TRS sleeve tab where the hole is located
@@ -54,6 +54,14 @@ This is the process I use for building. See photographs in ``images`` folder.
 - Insert the AIOC PCB into the solder guide
 - Solder sleeve tab on the back side for both TRS connectors first
 - Turn around PCB and solder remaining solder lugs
+
+## How To Build
+For building the firmware, clone the repository and initialize the submodules. Create an empty workspace with the STM32CubeIDE and import the project.
+  - ``git clone <repositry url>``
+  - ``git submodule update --init``
+  - Start STM32CubeIDE and create a new workspace under ``<project-root>/stm32``
+  - Choose File->Import and import the ``aioc-fw`` project in the same folder without copying
+  - Select Project->Build All and the project should build. Use the Release build unless you specifically want to debug an issue
 
 ## How To Program
 - Short outermost pins on the programming header. This will set the device into bootloader mode in the next step.
