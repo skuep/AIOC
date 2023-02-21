@@ -5,6 +5,37 @@
 #include "led.h"
 #include "usb_descriptors.h"
 
+static void ControlPTT(uint8_t ptt1, uint8_t ptt2)
+{
+    if (ptt1 || ptt2) {
+        /* In case any PTT is asserted, disable UART transmitter due to those sharing the same lines */
+        USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_TE;
+    }
+
+    if (ptt1) {
+        /* PTT1 */
+        USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT1;
+        LED_SET(1, 1);
+    } else {
+        USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT1;
+        LED_SET(1, 0);
+    }
+
+    if (ptt2) {
+        /* PTT2 */
+        USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT2;
+        LED_SET(0, 1);
+    } else {
+        USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT2;
+        LED_SET(0, 0);
+    }
+
+    if (!ptt1 && !ptt2) {
+        /* Enable UART transmitter again, when no PTT is asserted */
+        USB_SERIAL_UART->CR1 |= USART_CR1_TE;
+    }
+}
+
 void USB_SERIAL_UART_IRQ(void)
 {
     uint32_t ISR = USB_SERIAL_UART->ISR;
@@ -73,6 +104,9 @@ void tud_cdc_rx_cb(uint8_t itf)
         /* This enables the transmitter and the TX-empty interrupt, which handles writing UART data */
         __disable_irq();
         USB_SERIAL_UART->CR1 |= USART_CR1_TE | USART_CR1_TXEIE;
+
+        /* Disable all PTT action */
+        ControlPTT(0, 0);
         __enable_irq();
     }
 }
@@ -145,39 +179,17 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
 // Invoked when cdc when line state changed e.g connected/disconnected
 void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
-    if (dtr ^ rts) {
-        /* In case any PTT is asserted, disable UART transmitter due to those sharing the same lines */
-        __disable_irq();
-        USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_TE;
-        __enable_irq();
-    }
-
-    if (!dtr & rts) {
-        /* PTT1 */
-        USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT1;
-        LED_SET(1, 1);
-    } else {
-        USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT1;
-        LED_SET(1, 0);
-    }
-
+    /* PTT Encoding logic */
+    uint8_t ptt1 = dtr;
 #if AIOC_ENABLE_PTT2
-    if (dtr & !rts) {
-        /* PTT2 */
-        USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT2;
-        LED_SET(0, 1);
-    } else {
-        USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT2;
-        LED_SET(0, 0);
-    }
+    uint8_t ptt2 = rts;
+#else
+    uint8_t ptt2 = 0;
 #endif
 
-    if ( !(dtr ^ rts) ) {
-        /* Enable UART transmitter again, when no PTT is asserted */
-        __disable_irq();
-        USB_SERIAL_UART->CR1 |= USART_CR1_TE;
-        __enable_irq();
-    }
+    __disable_irq();
+    ControlPTT(ptt1, ptt2);
+    __enable_irq();
 }
 
 void USB_SerialInit(void)
