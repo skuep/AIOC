@@ -40,7 +40,7 @@ enum USB_STRING_IDX {
 #define USB_STRING_AUDIOINVOL       "AIOC Audio In Volume"
 #define USB_STRING_AUDIOOUTVOL      "AIOC Audio Out Volume"
 #define USB_STRING_AUDIOINCHAN      "AIOC Audio In Channel"
-#define USB_STRING_AUDIOOUTCHAN     "AIOC Audio Out CHannel"
+#define USB_STRING_AUDIOOUTCHAN     "AIOC Audio Out Channel"
 
 /* Endpoints */
 #define EPNUM_AUDIO_IN      0x81
