@@ -7,17 +7,26 @@ This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phas
 The AIOC is a small adapter with a USB-C connector that enumerates itself as a sound-card (e.g. for APRS purposes) 
 and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Talk).
 
+See the video from the *Temporarily Offline* YouTube channel [here](https://www.youtube.com/watch?v=RZjoPNe634o).
+
 ## Features ##
 - Cheap & Hackable Digital mode USB interface (similar to digirig, mobilinkd, etc...)
 - Programming Cable Function via virtual Serial Port
 - Compact form-factor (DIY overmolded enclosure is currently TBD)
 - Based on easy-to-hack STM32F302 with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
-- Tested with Wouxun UV-9D Mate and Baofeng UV-5R
 - Can support Dual-PTT HTs
-- Supports at least:
+
+## Compatibility
+### Software
   - [Direwolf](#notes-on-direwolf) as AX.25 modem/APRS en+decoder/...
   - [APRSdroid](#notes-on-aprsdroid) as APRS en+decoder
   - [CHIRP](#notes-on-chirp) for programming
+  - ... and more
+
+### Tested Radios (so far)
+  - Wouxun UV-9D Mate (CHIRP + APRS)
+  - Baofeng UV-5R (CHIRP + APRS)
+  - BTECH 6X2 (CHIRP) 
 
 ## Future Work ##
 - Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
