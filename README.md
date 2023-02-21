@@ -74,12 +74,15 @@ For building the firmware, clone the repository and initialize the submodules. C
 - Remove short from first step, unplug and replug the device, it should now enumerate as the AIOC device
 
 ## How To Use
-The serial interface of the AIOC enumerates as a regular COM (Windows) or ttyACM port (Linux) and can be used as such for programming the radio as well as PTT (Asserted on RTS=1 and DTR=0).
+The serial interface of the AIOC enumerates as a regular COM (Windows) or ttyACM port (Linux) and can be used as such for programming the radio as well as PTT (Asserted on ``DTR=1``).
 
 The soundcard interface of the AIOC gives access to the audio data channels. It has one mono microphone channel and one mono speaker channel and currently supports the following baudrates:
   - 48000 Hz (preferred)
   - 24000 Hz
   - 22050 Hz (specifically for APRSdroid, has approx. 90 ppm of frequency error)
+  - 12000 Hz
+  - 11025 Hz (has approx. 90 ppm of frequency error)
+  - 8000 Hz
 
 USB HID based PTT control (and general configuration of the AIOC) is currently on the idea list. For further discussion go to GitHub issues.
 
@@ -92,7 +95,7 @@ USB HID based PTT control (and general configuration of the AIOC) is currently o
   ADEVICE x 0           # <- Windows
   ARATE 48000
   [...]
-  PTT <port> RTS -DTR
+  PTT <port> DTR
   [...]
   ````
 
