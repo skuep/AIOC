@@ -20,6 +20,9 @@ typedef enum {
     SAMPLERATE_48000,
     SAMPLERATE_24000,
     SAMPLERATE_22050, /* For APRSdroid support. NOTE: Has approx. 90 ppm of clock frequency error (ca. 22052 Hz) */
+    SAMPLERATE_12000,
+    SAMPLERATE_11025, /* NOTE: Has approx. 90 ppm of clock frequency error (ca. 11026 Hz) */
+    SAMPLERATE_8000,
     SAMPLERATE_COUNT /* Has to be last element */
 } samplerate_t;
 
@@ -55,6 +58,9 @@ static audio_control_range_4_n_t(SAMPLERATE_COUNT) sampleFreqRng = {
         [SAMPLERATE_48000] = {.bMin = 48000, .bMax = 48000, .bRes = 0},
         [SAMPLERATE_24000] = {.bMin = 24000, .bMax = 24000, .bRes = 0},
         [SAMPLERATE_22050] = {.bMin = 22050, .bMax = 22050, .bRes = 0},
+        [SAMPLERATE_12000] = {.bMin = 12000, .bMax = 12000, .bRes = 0},
+        [SAMPLERATE_11025] = {.bMin = 11025, .bMax = 11025, .bRes = 0},
+        [SAMPLERATE_8000]  = {.bMin =  8000, .bMax =  8000, .bRes = 0},
     }
 };
 
