@@ -53,9 +53,49 @@ uint8_t const* tud_descriptor_device_cb(void) {
 }
 
 //--------------------------------------------------------------------+
+// HID Report Descriptor
+//--------------------------------------------------------------------+
+
+uint8_t const desc_hid_report[] = {
+    /* CM108 emulation */
+    HID_USAGE_PAGE   ( HID_USAGE_PAGE_CONSUMER ),
+    HID_USAGE        ( HID_USAGE_CONSUMER_CONTROL ),
+    HID_COLLECTION   ( HID_COLLECTION_APPLICATION ),
+      /* Input */
+      HID_USAGE       ( 0x00                                   ),
+      HID_LOGICAL_MIN ( 0x00                                   ),
+      HID_LOGICAL_MAX_N ( 0xff, 2                              ),
+      HID_REPORT_SIZE ( 8                                      ),
+      HID_REPORT_COUNT( 4                                      ),
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ),
+      /* Output */
+      HID_USAGE       ( 0x00                                    ),
+      HID_LOGICAL_MIN ( 0x00                                    ),
+      HID_LOGICAL_MAX_N ( 0xff, 2                               ),
+      HID_REPORT_SIZE ( 8                                       ),
+      HID_REPORT_COUNT( 4                                       ),
+      HID_OUTPUT      ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
+    HID_COLLECTION_END
+};
+
+// Invoked when received GET HID REPORT DESCRIPTOR
+// Application return pointer to descriptor
+// Descriptor contents must exist long enough for transfer to complete
+uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
+{
+    (void) itf;
+    return desc_hid_report;
+}
+
+//--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + CFG_TUD_CDC * TUD_CDC_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO_IO_DESC_LEN)
+#define CONFIG_TOTAL_LEN ( \
+        TUD_CONFIG_DESC_LEN + \
+        AIOC_AUDIO_DESC_LEN + \
+        AIOC_HID_DESC_LEN + \
+        AIOC_CDC_DESC_LEN \
+)
 
 uint8_t const desc_fs_configuration[] = {
     // Config number, interface count, string index, total length, attribute, power in mA
@@ -68,7 +108,28 @@ uint8_t const desc_fs_configuration[] = {
         /* _power_ma */     100
     ),
 
-    TUD_CDC_DESCRIPTOR(
+    AIOC_AUDIO_DESCRIPTOR(
+        /* _itfnum */       ITF_NUM_AUDIO_CONTROL,
+        /* _stridx */       STR_IDX_AUDIOITF,
+        /* _nBytesPerSample */ CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE,
+        /* _nBitsUsedPerSample */ CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE*8,
+        /* _epin */         EPNUM_AUDIO_IN,
+        /* _epinsize */     CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX,
+        /* _epout */        EPNUM_AUDIO_OUT,
+        /* _epoutsize */    CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX,
+        /* _epfb */         EPNUM_AUDIO_FB
+    ),
+    AIOC_HID_DESCRIPTOR(
+        /* _itfnum */       ITF_NUM_HID,
+        /* _stridx */       STR_IDX_HIDITF,
+        /* _boot_protocol */HID_ITF_PROTOCOL_NONE,
+        /*_report_desc_len*/sizeof(desc_hid_report),
+        /* _epin */         EPNUM_HID_IN,
+        /* _epsize */       CFG_TUD_HID_EP_BUFSIZE,
+        /* _ep_interval */  0x20
+    ),
+
+    AIOC_CDC_DESCRIPTOR(
         /* _itfnum */       ITF_NUM_CDC_0,
         /* _stridx */       STR_IDX_CDCITF,
         /* _ep_notif */     EPNUM_CDC_0_NOTIF,
@@ -76,18 +137,6 @@ uint8_t const desc_fs_configuration[] = {
         /* _epout */        EPNUM_CDC_0_OUT,
         /* _epin */         EPNUM_CDC_0_IN,
         /* _epsize */       CFG_TUD_CDC_EP_BUFSIZE
-    ),
-
-    TUD_AUDIO_IO_DESCRIPTOR(
-        /*_itfnum*/         ITF_NUM_AUDIO_CONTROL,
-        /*_stridx*/         STR_IDX_AUDIOITF,
-        /*_nBytesPerSample*/ CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE,
-        /*_nBitsUsedPerSample*/ CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE*8,
-        /*_epin*/           EPNUM_AUDIO_IN,
-        /*_epinsize*/       CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX,
-        /*_epout*/          EPNUM_AUDIO_OUT,
-        /*_epoutsize*/      CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX,
-        /*_epfb*/           EPNUM_AUDIO_FB
     )
 };
 
@@ -207,6 +256,10 @@ const uint16_t * tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
 
     case STR_IDX_AUDIOOUTCHAN:
         len = ascii_to_utf16(ptr, len, USB_STRING_AUDIOOUTCHAN);
+        break;
+
+    case STR_IDX_HIDITF:
+        len = ascii_to_utf16(ptr, len, USB_STRING_HIDITF);
         break;
 
     default:

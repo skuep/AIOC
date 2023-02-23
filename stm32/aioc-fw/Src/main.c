@@ -1,6 +1,7 @@
 #include "stm32f3xx_hal.h"
 #include "aioc.h"
 #include "led.h"
+#include "ptt.h"
 #include "usb.h"
 #include <assert.h>
 #include <stdio.h>
@@ -90,6 +91,8 @@ int main(void)
     LED_Init();
     LED_MODE(0, LED_MODE_SLOWPULSE2X);
     LED_MODE(1, LED_MODE_SLOWPULSE2X);
+
+    PTT_Init();
 
     USB_Init();
 

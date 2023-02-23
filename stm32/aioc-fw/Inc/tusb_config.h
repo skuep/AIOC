@@ -97,6 +97,7 @@
 //------------- CLASS -------------//
 #define CFG_TUD_AUDIO             1
 #define CFG_TUD_CDC               1
+#define CFG_TUD_HID               1
 
 // CDC FIFO size of TX and RX
 #define CFG_TUD_CDC_RX_BUFSIZE   128
@@ -104,6 +105,9 @@
 
 // CDC Endpoint transfer buffer size, more is faster
 #define CFG_TUD_CDC_EP_BUFSIZE   64
+
+// HID buffer size
+#define CFG_TUD_HID_EP_BUFSIZE   8
 
  //--------------------------------------------------------------------
  // AUDIO CLASS DRIVER CONFIGURATION
@@ -115,7 +119,7 @@
 #define CFG_TUD_AUDIO_ENABLE_EP_OUT                                   1
 #define CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP                              1
 
-#define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                                 TUD_AUDIO_IO_DESC_LEN
+#define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                                 AIOC_AUDIO_DESC_LEN
 #define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                                 1
 #define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ                              64
 #define CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE                       2

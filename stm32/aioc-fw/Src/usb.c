@@ -4,6 +4,7 @@
 #include "tusb.h"
 #include "usb_serial.h"
 #include "usb_audio.h"
+#include "usb_hid.h"
 
 // We have ISOCHRONOUS endpoints defined that share the same endpoint number, but have opposing directions.
 // However with STM32 hardware, ISOCHRONOUS endpoints use both RX and TX structures of the same endpoint register in hardware
@@ -26,12 +27,16 @@ uint8_t tu_stm32_edpt_number_cb(uint8_t addr)
     case EPNUM_AUDIO_FB:
         return 0x03;
 
-    case EPNUM_CDC_0_OUT:
-    case EPNUM_CDC_0_IN:
+    case EPNUM_HID_IN:
+    case EPNUM_HID_OUT:
         return 0x04;
 
-    case EPNUM_CDC_0_NOTIF:
+    case EPNUM_CDC_0_OUT:
+    case EPNUM_CDC_0_IN:
         return 0x05;
+
+    case EPNUM_CDC_0_NOTIF:
+        return 0x06;
 
     default:
         TU_BREAKPOINT();
@@ -127,6 +132,7 @@ void USB_Init(void)
     // Init classes
     USB_SerialInit();
     USB_AudioInit();
+    USB_HIDInit();
 
     // Start USB Stack
     tud_init(BOARD_TUD_RHPORT);
