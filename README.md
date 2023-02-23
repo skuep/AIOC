@@ -7,7 +7,9 @@ This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phas
 The AIOC is a small adapter with a USB-C connector that enumerates itself as a sound-card (e.g. for APRS purposes) 
 and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Talk).
 
-See the video from the *Temporarily Offline* YouTube channel [here](https://www.youtube.com/watch?v=RZjoPNe634o).
+You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTube channels below.
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/RZjoPNe634o/0.jpg)](http://www.youtube.com/watch?v=RZjoPNe634o "Video Title")
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/xRCmXQYRLE0/0.jpg)](http://www.youtube.com/watch?v=xRCmXQYRLE0 "Video Title")
 
 ## Features ##
 - Cheap & Hackable Digital mode USB interface (similar to digirig, mobilinkd, etc...)
