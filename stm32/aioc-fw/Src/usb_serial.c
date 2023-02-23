@@ -3,36 +3,25 @@
 #include "aioc.h"
 #include "tusb.h"
 #include "led.h"
+#include "ptt.h"
 #include "usb_descriptors.h"
 
-static void ControlPTT(uint8_t ptt1, uint8_t ptt2)
+static void ControlPTT(uint8_t pttMask)
 {
-    if (ptt1 || ptt2) {
+    if (pttMask != PTT_MASK_NONE) {
         /* In case any PTT is asserted, disable UART transmitter due to those sharing the same lines */
+        __disable_irq();
         USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_TE;
+        __enable_irq();
     }
 
-    if (ptt1) {
-        /* PTT1 */
-        USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT1;
-        LED_SET(1, 1);
-    } else {
-        USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT1;
-        LED_SET(1, 0);
-    }
+    PTT_Control(pttMask);
 
-    if (ptt2) {
-        /* PTT2 */
-        USB_SERIAL_UART_GPIO->BSRR |= USB_SERIAL_UART_PIN_PTT2;
-        LED_SET(0, 1);
-    } else {
-        USB_SERIAL_UART_GPIO->BRR |= USB_SERIAL_UART_PIN_PTT2;
-        LED_SET(0, 0);
-    }
-
-    if (!ptt1 && !ptt2) {
+    if (pttMask == PTT_MASK_NONE) {
         /* Enable UART transmitter again, when no PTT is asserted */
+        __disable_irq();
         USB_SERIAL_UART->CR1 |= USART_CR1_TE;
+        __enable_irq();
     }
 }
 
@@ -43,7 +32,7 @@ void USB_SERIAL_UART_IRQ(void)
     if (ISR & USART_ISR_TXE) {
         /* TX register is empty, load up another character */
         __disable_irq();
-        uint32_t available = tud_cdc_n_available(ITF_NUM_CDC_0);
+        uint32_t available = tud_cdc_n_available(0);
         if (available == 0) {
             /* No char left in fifo. Disable transmitter and TX-empty interrupt */
             USB_SERIAL_UART->CR1 &= (uint32_t) ~(USART_CR1_TE | USART_CR1_TXEIE);
@@ -52,7 +41,7 @@ void USB_SERIAL_UART_IRQ(void)
 
         if (available > 0) {
              /* Write char from fifo */
-            int32_t c = tud_cdc_n_read_char(ITF_NUM_CDC_0);
+            int32_t c = tud_cdc_n_read_char(0);
             TU_ASSERT(c != -1, /**/);
             USB_SERIAL_UART->TDR = (uint8_t) c;
             LED_MODE(1, LED_MODE_FASTPULSE);
@@ -61,11 +50,11 @@ void USB_SERIAL_UART_IRQ(void)
 
     if (ISR & USART_ISR_RXNE) {
         /* RX register is not empty, get character and put into USB send buffer */
-        if (tud_cdc_n_write_available(ITF_NUM_CDC_0) > 0) {
+        if (tud_cdc_n_write_available(0) > 0) {
             uint8_t c = USB_SERIAL_UART->RDR;
-            if ( !(USB_SERIAL_UART_GPIO->IDR & (USB_SERIAL_UART_PIN_PTT1 | USB_SERIAL_UART_PIN_PTT2)) ) {
+            if (PTT_Status() == PTT_MASK_NONE) {
                 /* Only store character when no PTT is asserted (shares the same pin) */
-                tud_cdc_n_write(ITF_NUM_CDC_0, &c, 1);
+                tud_cdc_n_write(0, &c, 1);
                 LED_MODE(0, LED_MODE_FASTPULSE);
             }
         } else {
@@ -79,7 +68,7 @@ void USB_SERIAL_UART_IRQ(void)
     if (ISR & USART_ISR_RTOF) {
         USB_SERIAL_UART->ICR = USART_ICR_RTOCF;
         /* Receiver timeout. Flush data via USB. */
-        tud_cdc_n_write_flush(ITF_NUM_CDC_0);
+        tud_cdc_n_write_flush(0);
     }
 
     if (ISR & USART_ISR_ORE) {
@@ -100,96 +89,95 @@ void USB_SERIAL_UART_IRQ(void)
 // Invoked when CDC interface received data from host
 void tud_cdc_rx_cb(uint8_t itf)
 {
-    if (itf == ITF_NUM_CDC_0) {
-        /* This enables the transmitter and the TX-empty interrupt, which handles writing UART data */
-        __disable_irq();
-        USB_SERIAL_UART->CR1 |= USART_CR1_TE | USART_CR1_TXEIE;
+    TU_ASSERT(itf == 0, /**/);
 
-        /* Disable all PTT action */
-        ControlPTT(0, 0);
-        __enable_irq();
-    }
+    /* This enables the transmitter and the TX-empty interrupt, which handles writing UART data */
+    __disable_irq();
+    USB_SERIAL_UART->CR1 |= USART_CR1_TE | USART_CR1_TXEIE;
+    __enable_irq();
+
+    /* Disable all PTT action */
+    ControlPTT(PTT_MASK_NONE);
 }
 
 // Invoked when space becomes available in TX buffer
 void tud_cdc_tx_complete_cb(uint8_t itf)
 {
-    if (itf == ITF_NUM_CDC_0) {
-        /* Re-enable UART RX-nonempty interrupt to handle reading UART data */
-        __disable_irq();
-        USB_SERIAL_UART->CR1 |= USART_CR1_RXNEIE;
-        __enable_irq();
-    }
+    TU_ASSERT(itf == 0, /**/);
+
+    /* Re-enable UART RX-nonempty interrupt to handle reading UART data */
+    __disable_irq();
+    USB_SERIAL_UART->CR1 |= USART_CR1_RXNEIE;
+    __enable_irq();
 }
 
 // Invoked when line coding is change via SET_LINE_CODING
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
 {
-    if (itf == ITF_NUM_CDC_0) {
-        /* Disable IRQs and UART */
-        __disable_irq();
-        USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_UE;
+    TU_ASSERT(itf == 0, /**/);
 
-        /* Calculate new baudrate */
-        USB_SERIAL_UART->BRR = (HAL_RCCEx_GetPeriphCLKFreq(USB_SERIAL_UART_PERIPHCLK) + p_line_coding->bit_rate/2) / p_line_coding->bit_rate;
+    /* Disable IRQs and UART */
+    __disable_irq();
+    USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_UE;
 
-        if (p_line_coding->data_bits == 8) {
-        } else {
-            /* Support only 8 bit character size */
-            TU_ASSERT(0, /**/);
-        }
+    /* Calculate new baudrate */
+    USB_SERIAL_UART->BRR = (HAL_RCCEx_GetPeriphCLKFreq(USB_SERIAL_UART_PERIPHCLK) + p_line_coding->bit_rate/2) / p_line_coding->bit_rate;
 
-        if (p_line_coding->parity == 0) {
-            /* No parity */
-            USB_SERIAL_UART->CR1 = (USB_SERIAL_UART->CR1 & (uint32_t) ~(USART_CR1_PCE | USART_CR1_PS | USART_CR1_M | USART_CR1_M0))
-                    | UART_PARITY_NONE;
-        } else if (p_line_coding->parity == 1) {
-            /* Odd parity */
-            USB_SERIAL_UART->CR1 = (USB_SERIAL_UART->CR1 & (uint32_t) ~(USART_CR1_PCE | USART_CR1_PS | USART_CR1_M | USART_CR1_M0))
-                    | UART_PARITY_ODD | UART_WORDLENGTH_9B;
-        } else if (p_line_coding->parity == 2) {
-            /* Even parity */
-            USB_SERIAL_UART->CR1 = (USB_SERIAL_UART->CR1 & (uint32_t) ~(USART_CR1_PCE | USART_CR1_PS | USART_CR1_M | USART_CR1_M0))
-                    | UART_PARITY_EVEN | UART_WORDLENGTH_9B;
-        } else {
-            /* Other parity modes are not supported */
-            TU_ASSERT(0, /**/);
-        }
-
-        if (p_line_coding->stop_bits == 0) {
-            /* 1 stop bit */
-            USB_SERIAL_UART->CR2 = (USB_SERIAL_UART->CR2 & (uint32_t) ~USART_CR2_STOP) | UART_STOPBITS_1;
-        } else if (p_line_coding->stop_bits == 1) {
-            /* 1.5 stop bit */
-            USB_SERIAL_UART->CR2 = (USB_SERIAL_UART->CR2 & (uint32_t) ~USART_CR2_STOP) | UART_STOPBITS_1_5;
-        } else if (p_line_coding->stop_bits == 2) {
-            /* 2 stop bit */
-            USB_SERIAL_UART->CR2 = (USB_SERIAL_UART->CR2 & (uint32_t) ~USART_CR2_STOP) | UART_STOPBITS_2;
-        } else {
-            /* Other stop bits unsupported */
-            TU_ASSERT(0, /**/);
-        }
-
-        /* Re-enable UUART and IRQs */
-        USB_SERIAL_UART->CR1 |= USART_CR1_UE;
-        __enable_irq();
+    if (p_line_coding->data_bits == 8) {
+    } else {
+        /* Support only 8 bit character size */
+        TU_ASSERT(0, /**/);
     }
+
+    if (p_line_coding->parity == 0) {
+        /* No parity */
+        USB_SERIAL_UART->CR1 = (USB_SERIAL_UART->CR1 & (uint32_t) ~(USART_CR1_PCE | USART_CR1_PS | USART_CR1_M | USART_CR1_M0))
+                | UART_PARITY_NONE;
+    } else if (p_line_coding->parity == 1) {
+        /* Odd parity */
+        USB_SERIAL_UART->CR1 = (USB_SERIAL_UART->CR1 & (uint32_t) ~(USART_CR1_PCE | USART_CR1_PS | USART_CR1_M | USART_CR1_M0))
+                | UART_PARITY_ODD | UART_WORDLENGTH_9B;
+    } else if (p_line_coding->parity == 2) {
+        /* Even parity */
+        USB_SERIAL_UART->CR1 = (USB_SERIAL_UART->CR1 & (uint32_t) ~(USART_CR1_PCE | USART_CR1_PS | USART_CR1_M | USART_CR1_M0))
+                | UART_PARITY_EVEN | UART_WORDLENGTH_9B;
+    } else {
+        /* Other parity modes are not supported */
+        TU_ASSERT(0, /**/);
+    }
+
+    if (p_line_coding->stop_bits == 0) {
+        /* 1 stop bit */
+        USB_SERIAL_UART->CR2 = (USB_SERIAL_UART->CR2 & (uint32_t) ~USART_CR2_STOP) | UART_STOPBITS_1;
+    } else if (p_line_coding->stop_bits == 1) {
+        /* 1.5 stop bit */
+        USB_SERIAL_UART->CR2 = (USB_SERIAL_UART->CR2 & (uint32_t) ~USART_CR2_STOP) | UART_STOPBITS_1_5;
+    } else if (p_line_coding->stop_bits == 2) {
+        /* 2 stop bit */
+        USB_SERIAL_UART->CR2 = (USB_SERIAL_UART->CR2 & (uint32_t) ~USART_CR2_STOP) | UART_STOPBITS_2;
+    } else {
+        /* Other stop bits unsupported */
+        TU_ASSERT(0, /**/);
+    }
+
+    /* Re-enable UUART and IRQs */
+    USB_SERIAL_UART->CR1 |= USART_CR1_UE;
+    __enable_irq();
 }
 
 // Invoked when cdc when line state changed e.g connected/disconnected
 void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
+    TU_ASSERT(itf == 0, /**/);
+
     /* PTT Encoding logic */
-    uint8_t ptt1 = dtr;
+    uint8_t pttMask = (dtr ? PTT_MASK_PTT1 : 0);
+
 #if AIOC_ENABLE_PTT2
-    uint8_t ptt2 = rts;
-#else
-    uint8_t ptt2 = 0;
+    pttMask |= (rts ? PTT_MASK_PTT2 : 0);
 #endif
 
-    __disable_irq();
-    ControlPTT(ptt1, ptt2);
-    __enable_irq();
+    ControlPTT(pttMask);
 }
 
 void USB_SerialInit(void)
@@ -203,16 +191,6 @@ void USB_SerialInit(void)
     SerialGpio.Speed = GPIO_SPEED_FREQ_LOW;
     SerialGpio.Alternate = GPIO_AF7_USART1;
     HAL_GPIO_Init(USB_SERIAL_UART_GPIO, &SerialGpio);
-
-    /* Set up RTS and DTR controlled GPIOs */
-    GPIO_InitTypeDef RtsDtrGpio = {
-        .Pin = (USB_SERIAL_UART_PIN_PTT2 | USB_SERIAL_UART_PIN_PTT1),
-        .Mode = GPIO_MODE_OUTPUT_PP,
-        .Pull = GPIO_PULLDOWN,
-        .Speed = GPIO_SPEED_FREQ_LOW,
-        .Alternate = 0
-    };
-    HAL_GPIO_Init(USB_SERIAL_UART_GPIO, &RtsDtrGpio);
 
     /* Errata 2.11.5 When PCLK is selected as clock source for USART1, PCLK1 is used instead of PCLK2.
      *  To reach 9 Mbaud, System Clock (SYSCLK) should be selected as USART1 clock source. */

@@ -9,8 +9,6 @@
 #define USB_SERIAL_UART_GPIO        GPIOA
 #define USB_SERIAL_UART_PIN_TX      GPIO_PIN_9
 #define USB_SERIAL_UART_PIN_RX      GPIO_PIN_10
-#define USB_SERIAL_UART_PIN_PTT1    GPIO_PIN_1
-#define USB_SERIAL_UART_PIN_PTT2    GPIO_PIN_0
 
 void USB_SerialInit(void);
 void USB_SerialTask(void);
