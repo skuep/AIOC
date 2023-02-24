@@ -17,10 +17,12 @@
 #define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB and maximum sample rate */
 
 typedef enum {
-    SAMPLERATE_48000,
-    SAMPLERATE_24000,
+    SAMPLERATE_48000, /* The high-quality default */
+    SAMPLERATE_32000, /* For completeness sake, support 32 kHz as well */
+    SAMPLERATE_24000, /* Just half of 48 kHz */
     SAMPLERATE_22050, /* For APRSdroid support. NOTE: Has approx. 90 ppm of clock frequency error (ca. 22052 Hz) */
-    SAMPLERATE_12000,
+    SAMPLERATE_16000, /* On ARM platforms, direwolf will by default, divide configured sample rate by 3, thus support 16 kHz */
+    SAMPLERATE_12000, /* Just a quarter of 48 kHz */
     SAMPLERATE_11025, /* NOTE: Has approx. 90 ppm of clock frequency error (ca. 11026 Hz) */
     SAMPLERATE_8000,
     SAMPLERATE_COUNT /* Has to be last element */
@@ -56,8 +58,10 @@ static audio_control_range_4_n_t(SAMPLERATE_COUNT) sampleFreqRng = {
     .wNumSubRanges = SAMPLERATE_COUNT,
     .subrange = {
         [SAMPLERATE_48000] = {.bMin = 48000, .bMax = 48000, .bRes = 0},
+        [SAMPLERATE_32000] = {.bMin = 32000, .bMax = 32000, .bRes = 0},
         [SAMPLERATE_24000] = {.bMin = 24000, .bMax = 24000, .bRes = 0},
         [SAMPLERATE_22050] = {.bMin = 22050, .bMax = 22050, .bRes = 0},
+        [SAMPLERATE_16000] = {.bMin = 16000, .bMax = 16000, .bRes = 0},
         [SAMPLERATE_12000] = {.bMin = 12000, .bMax = 12000, .bRes = 0},
         [SAMPLERATE_11025] = {.bMin = 11025, .bMax = 11025, .bRes = 0},
         [SAMPLERATE_8000]  = {.bMin =  8000, .bMax =  8000, .bRes = 0},
