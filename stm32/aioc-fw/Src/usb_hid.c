@@ -23,16 +23,27 @@ uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t
 {
   (void) itf;
   (void) report_id;
-  (void) report_type;
   (void) buffer;
   (void) reqlen;
 
-  buffer[0] = 0x00;
-  buffer[1] = gpioState;
-  buffer[2] = 0x00;
-  buffer[3] = 0x00;
+  switch (report_type) {
+      case HID_REPORT_TYPE_INPUT:
+          buffer[0] = 0x00;
+          buffer[1] = gpioState;
+          buffer[2] = 0x00;
+          buffer[3] = 0x00;
+          return USB_HID_INOUT_REPORT_LEN;
 
-  return USB_HID_INOUT_REPORT_LEN;
+      case HID_REPORT_TYPE_FEATURE:
+          /* Custom extension for configuring the AIOC */
+          break;
+
+      default:
+          TU_BREAKPOINT();
+          break;
+  }
+
+  return 0;
 }
 
 // Invoked when received SET_REPORT control request
