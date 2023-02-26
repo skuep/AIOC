@@ -6,7 +6,7 @@
 
   (title_block
     (title "All-In-One-Cable (AIOC)")
-    (rev "0")
+    (rev "1.0")
   )
 
   (lib_symbols
@@ -2757,9 +2757,6 @@
     (property "LCSC" "C8653" (id 4) (at 219.71 67.3099 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 4958f47a-5508-4a80-bf22-75a02df216d8))
-    (pin "2" (uuid c2f0b135-1933-4339-bbde-9b53ae1486af))
-    (pin "6" (uuid e3ba2f4c-e148-4f9e-96c4-425c4ef34d43))
     (pin "3" (uuid 4ce1867b-d617-45a2-99a1-bfaec0676160))
     (pin "4" (uuid bc8b2b5d-6428-41ff-b6aa-b6427a38cf9e))
     (pin "5" (uuid 077d457b-b945-4fbb-a50b-abe94eb58c03))
@@ -3144,9 +3141,6 @@
     (pin "1" (uuid 2c242f71-e77c-471c-959e-8fa5b39190a1))
     (pin "2" (uuid a0bf5c4b-e106-47dd-ab7f-78962adb937c))
     (pin "6" (uuid f5531741-b12f-4a57-8f5a-42cce5332504))
-    (pin "3" (uuid 51e1bc67-6602-46e6-a23e-de4480e71720))
-    (pin "4" (uuid f885959f-43c9-41fe-88b6-c62e1e2cd573))
-    (pin "5" (uuid 5510bf33-79c7-440c-97e2-8e52000151be))
   )
 
   (symbol (lib_id "power:GND") (at 124.46 175.26 0) (unit 1)
