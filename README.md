@@ -1,4 +1,6 @@
 # AIOC
+<a href="https://discord.gg/wCbXu9R95C"><img align="right" src="https://dcbadge.vercel.app/api/server/wCbXu9R95C"/></a>
+
 This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!** Please read this README carefully before ordering anything.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
