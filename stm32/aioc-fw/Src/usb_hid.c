@@ -7,6 +7,23 @@
 
 static uint8_t gpioState = 0x00;
 
+static void MakeReport(uint8_t * buffer)
+{
+    /* TODO: Read the actual states of the GPIO input hardware pins. */
+    buffer[0] = 0x00;
+    buffer[1] = gpioState;
+    buffer[2] = 0x00;
+    buffer[3] = 0x00;
+}
+
+static void SendReport(void)
+{
+    uint8_t reportBuffer[USB_HID_INOUT_REPORT_LEN];
+    MakeReport(reportBuffer);
+
+    tud_hid_report(0, reportBuffer, sizeof(reportBuffer));
+}
+
 static void ControlPTT(uint8_t gpio)
 {
     /* PTT1 on GPIO 3, PTT2 on GPIO4 */
@@ -28,10 +45,9 @@ uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t
 
   switch (report_type) {
       case HID_REPORT_TYPE_INPUT:
-          buffer[0] = 0x00;
-          buffer[1] = gpioState;
-          buffer[2] = 0x00;
-          buffer[3] = 0x00;
+          TU_ASSERT(reqlen >= USB_HID_INOUT_REPORT_LEN, 0);
+
+          MakeReport(buffer);
           return USB_HID_INOUT_REPORT_LEN;
 
       case HID_REPORT_TYPE_FEATURE:
@@ -58,8 +74,22 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
 
             /* Output report, emulate CM108 behaviour */
             if ((buffer[0] & 0xC0) == 0) {
+                uint8_t gpioChange = gpioState ^ buffer[1];
                 gpioState = buffer[1];
                 ControlPTT(gpioState);
+
+                /* The CM108 sends an input report via the HID interrupt endpoint to the host,
+                 * whenever something changes (e.g. GPIO). Currently, this is only the case, whenever
+                 * the host changes the GPIO state (since the GPIOs are hardwired as output).
+                 * In the future, we might also support GPIO as input for other purposes. In that
+                 * case, we might need some kind of interrupt mechanism to detect changes on the GPIOs.
+                 * However some GPIOs might be shared (e.g. with UART), so we need to find a way to
+                 * only enable the external GPIO interrupts, if the host actually has opened the HID
+                 * interrupt pipe.
+                 */
+                if (gpioChange) {
+                    SendReport();
+                }
             }
             break;
 
