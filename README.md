@@ -1,6 +1,9 @@
-# AIOC
-<a href="https://discord.gg/wCbXu9R95C"><img align="right" src="https://dcbadge.vercel.app/api/server/wCbXu9R95C"/></a>
+[![](https://dcbadge.vercel.app/api/server/wCbXu9R95C?style=flat&theme=default-inverted)](https://discord.gg/wCbXu9R95C)
+[![](https://img.shields.io/github/stars/skuep/AIOC)](https://github.com/skuep/AIOC/stargazers)
+[![](https://img.shields.io/github/v/release/skuep/AIOC?sort=semver)](https://github.com/skuep/AIOC/releases)
+[![](https://img.shields.io/github/license/skuep/AIOC)](https://github.com/skuep/AIOC/blob/master/LICENSE.md)
 
+# AIOC
 This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!** Please read this README carefully before ordering anything.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
@@ -10,8 +13,9 @@ The AIOC is a small adapter with a USB-C connector that enumerates itself as a s
 and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Talk).
 
 You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTube channels below.
-[![IMAGE ALT TEXT](http://img.youtube.com/vi/RZjoPNe634o/0.jpg)](http://www.youtube.com/watch?v=RZjoPNe634o "Video Title")
-[![IMAGE ALT TEXT](http://img.youtube.com/vi/xRCmXQYRLE0/0.jpg)](http://www.youtube.com/watch?v=xRCmXQYRLE0 "Video Title")
+
+[![All In One Cable AIOC - Ham Nuggets Season 4 Episode 8 S04E08](http://img.youtube.com/vi/RZjoPNe634o/0.jpg)](http://www.youtube.com/watch?v=RZjoPNe634o "All In One Cable AIOC - Ham Nuggets Season 4 Episode 8 S04E08")
+[![Your BAOFENG Programming Cable Sucks! - Get This! - AIOC All in One Cable](http://img.youtube.com/vi/xRCmXQYRLE0/0.jpg)](http://www.youtube.com/watch?v=xRCmXQYRLE0 "Your BAOFENG Programming Cable Sucks! - Get This! - AIOC All in One Cable")
 
 ## Features ##
 - Cheap & Hackable Digital mode USB interface (similar to digirig, mobilinkd, etc...)
