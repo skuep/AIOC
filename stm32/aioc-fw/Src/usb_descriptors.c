@@ -57,22 +57,40 @@ uint8_t const* tud_descriptor_device_cb(void) {
 //--------------------------------------------------------------------+
 
 uint8_t const desc_hid_report[] = {
-    /* CM108 emulation */
+    /* CM108 emulation. */
     HID_USAGE_PAGE   ( HID_USAGE_PAGE_CONSUMER ),
     HID_USAGE        ( HID_USAGE_CONSUMER_CONTROL ),
     HID_COLLECTION   ( HID_COLLECTION_APPLICATION ),
-      /* Input */
-      HID_USAGE       ( 0x00                                   ),
-      HID_LOGICAL_MIN ( 0x00                                   ),
-      HID_LOGICAL_MAX_N ( 0xff, 2                              ),
-      HID_REPORT_SIZE ( 8                                      ),
-      HID_REPORT_COUNT( 4                                      ),
-      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ),
-      /* Output */
-      HID_USAGE       ( 0x00                                    ),
+      /* Volume Up/Dn */
       HID_LOGICAL_MIN ( 0x00                                    ),
-      HID_LOGICAL_MAX_N ( 0xff, 2                               ),
+      HID_LOGICAL_MAX ( 0x01                                    ),
+      HID_USAGE       ( 0xE9 /* Volume Inc */                   ),
+      HID_USAGE       ( 0xEA /* Volume Dec */                   ),
+      HID_REPORT_SIZE ( 1                                       ),
+      HID_REPORT_COUNT( 2                                       ),
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
+      /* Mute */
+      HID_USAGE       ( 0xE2 /* Volume Mute */                  ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE  ),
+      /* Hook Switch */
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_TELEPHONY                ),
+      HID_USAGE       ( 0x20 /* Hook Switch */                  ),
+      HID_REPORT_COUNT( 1                                       ),
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE | HID_NULL_STATE),
+      /* Filler */
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_CONSUMER                 ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
+      HID_REPORT_COUNT( 3                                       ),
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
+      /* GPIO and Status */
+      HID_LOGICAL_MAX_N ( 0xFF, 2                               ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_REPORT_SIZE ( 8                                       ),
+      HID_REPORT_COUNT( 3                                       ),
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
+      /* Output */
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_REPORT_COUNT( 4                                       ),
       HID_OUTPUT      ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
     HID_COLLECTION_END
