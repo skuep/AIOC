@@ -112,7 +112,8 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
         TUD_CONFIG_DESC_LEN + \
         AIOC_AUDIO_DESC_LEN + \
         AIOC_HID_DESC_LEN + \
-        AIOC_CDC_DESC_LEN \
+        AIOC_CDC_DESC_LEN + \
+        AIOC_DFU_RT_DESC_LEN \
 )
 
 uint8_t const desc_fs_configuration[] = {
@@ -155,6 +156,16 @@ uint8_t const desc_fs_configuration[] = {
         /* _epout */        EPNUM_CDC_0_OUT,
         /* _epin */         EPNUM_CDC_0_IN,
         /* _epsize */       CFG_TUD_CDC_EP_BUFSIZE
+    ),
+
+    AIOC_DFU_RT_DESCRIPTOR(
+        /* _itfnum */       ITF_NUM_DFU_RT,
+        /* _stridx */       STR_IDX_DFU_RT,
+        /* _attr */         DFU_ATTR_WILL_DETACH | \
+                            DFU_ATTR_CAN_UPLOAD  | \
+                            DFU_ATTR_CAN_DOWNLOAD,
+        /* _timeout */      255, /* not used if WILL_DETACH */
+        /* _xfer_size */    2048 /* max size for stm32 dfu bootloader */
     )
 };
 
@@ -278,6 +289,10 @@ const uint16_t * tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
 
     case STR_IDX_HIDITF:
         len = ascii_to_utf16(ptr, len, USB_STRING_HIDITF);
+        break;
+
+    case STR_IDX_DFU_RT:
+        len = ascii_to_utf16(ptr, len, USB_STRING_DFU_RT);
         break;
 
     default:

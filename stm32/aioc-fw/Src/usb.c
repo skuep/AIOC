@@ -121,6 +121,23 @@ void GPIO_Init(void)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
+void USB_Reset(void)
+{
+    /* pull USB DP pins low to simulate disconnect
+       to force the host to re-enumerate when a new program is loaded */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_12;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    GPIOA->BRR = GPIO_PIN_12;
+
+    HAL_Delay(USB_RESET_DELAY);
+}
+
 void USB_Init(void)
 {
     __HAL_REMAPINTERRUPT_USB_ENABLE();

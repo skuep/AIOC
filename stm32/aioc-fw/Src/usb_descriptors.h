@@ -9,6 +9,7 @@ enum USB_DESCRIPTORS_ITF {
     ITF_NUM_HID, /* For CM108 compatibility make this interface #3 */
     ITF_NUM_CDC_0,
     ITF_NUM_CDC_0_DATA,
+    ITF_NUM_DFU_RT,
     ITF_NUM_TOTAL
 };
 
@@ -26,7 +27,8 @@ enum USB_STRING_IDX {
     STR_IDX_AUDIOINCHAN,
     STR_IDX_AUDIOOUTCHAN,
     STR_IDX_HIDITF,
-    STR_IDX_CDCITF
+    STR_IDX_CDCITF,
+    STR_IDX_DFU_RT
 };
 
 #define USB_VID                     0x1209
@@ -44,6 +46,7 @@ enum USB_STRING_IDX {
 #define USB_STRING_AUDIOOUTCHAN     "AIOC Audio Out Channel"
 #define USB_STRING_CDCITF           "AIOC CDC"
 #define USB_STRING_HIDITF           "AIOC HID"
+#define USB_STRING_DFU_RT           "AIOC DFU Runtime"
 
 /* Endpoints */
 #define EPNUM_AUDIO_IN      0x81
@@ -54,7 +57,6 @@ enum USB_STRING_IDX {
 #define EPNUM_CDC_0_OUT     0x04
 #define EPNUM_CDC_0_IN      0x84
 #define EPNUM_CDC_0_NOTIF   0x85
-
 
 /* Custom Audio Descriptor.
  * Courtesy of https://github.com/hathach/tinyusb/issues/1249#issuecomment-1148727765 */
@@ -167,5 +169,9 @@ enum USB_STRING_IDX {
 #define AIOC_CDC_DESC_LEN   TUD_CDC_DESC_LEN
 
 #define AIOC_CDC_DESCRIPTOR TUD_CDC_DESCRIPTOR
+
+#define AIOC_DFU_RT_DESC_LEN   TUD_DFU_RT_DESC_LEN
+
+#define AIOC_DFU_RT_DESCRIPTOR TUD_DFU_RT_DESCRIPTOR
 
 #endif /* USB_DESCRIPTORS_H_ */

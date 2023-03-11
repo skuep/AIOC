@@ -1,0 +1,13 @@
+dfu-suffix: $(OBJCOPY_BIN)
+ifneq ("$(wildcard /usr/bin/dfu-suffix)","")
+	dfu-suffix -c $(FILENAME) || dfu-suffix -a $(FILENAME) -p $(PID) -v $(VID) -d $(DID)
+else
+	@echo "Skipping DFU suffix generation, because dfu-suffix tool was not found"
+endif
+
+dfu-util: dfu-suffix
+ifneq ("$(wildcard /usr/bin/dfu-util)","")
+	dfu-util -d $(VID):$(PID) -a 0 -s 0x08000000:leave -D $(FILENAME)
+else
+	@echo "Skipping DFU programming, because dfu-util tool was not found"
+endif

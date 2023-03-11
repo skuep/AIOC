@@ -6,6 +6,16 @@
 #include <assert.h>
 #include <stdio.h>
 
+// from ST application note AN2606
+// Table 171: Bootloader device-dependent parameters
+#if defined(STM32F302xB) || defined(STM32F302xC) || \
+    defined(STM32F303xB) || defined(STM32F303xC) || \
+    defined(STM32F373xC)
+#define SYSTEM_MEMORY_BASE 0x1FFFD800
+#else
+#warning Live DFU reboot not supported on this MCU
+#endif
+
 static void SystemClock_Config(void)
 {
     HAL_StatusTypeDef status;
@@ -63,6 +73,56 @@ static void SystemClock_Config(void)
     HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_PLLCLK_DIV2, RCC_MCODIV_1);
 }
 
+static void SystemReset(void) {
+    uint32_t resetFlags = RCC->CSR;
+
+    /* Clear reset flags */
+    RCC->CSR |= RCC_CSR_RMVF;
+
+#if defined(SYSTEM_MEMORY_BASE)
+    if (resetFlags & RCC_CSR_IWDGRSTF) {
+        /* Reset cause was watchdog, which is used for rebooting into the bootloader.
+           Set stack pointer to *SYSTEM_MEMORY_BASE
+           and jump to *(SYSTEM_MEMORY_BASE + 4)
+           https://stackoverflow.com/a/42031657 */
+        asm volatile (
+            "  msr     msp, %[sp]      \n"
+            "  bx      %[pc]           \n"
+
+            :: [sp] "r" (*( (uint32_t*)(SYSTEM_MEMORY_BASE)     )),
+               [pc] "r" (*( (uint32_t*)(SYSTEM_MEMORY_BASE + 4) ))
+        );
+    }
+#else
+    while(1)
+        ;
+#endif
+
+    /* Initialize HAL */
+    HAL_Init();
+
+    /* Enable Clock to SYSCFG */
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+
+    /* Enable SWO debug output */
+    GPIO_InitTypeDef GpioSWOInit = {
+        .Pin = GPIO_PIN_3,
+        .Mode = GPIO_MODE_AF_PP,
+        .Pull = GPIO_NOPULL,
+        .Speed = GPIO_SPEED_FREQ_LOW,
+        .Alternate = GPIO_AF0_TRACE
+    };
+    HAL_GPIO_Init(GPIOB, &GpioSWOInit);
+
+    /* Reset USB if necessary */
+    if (!(resetFlags & RCC_CSR_PORRSTF)) {
+        /* Since the USB Pullup is hardwired to the supply voltage,
+         * the host (re-)enumerates our USB device only during Power-On-Reset.
+         * For all other reset causes, do a manual USB reset. */
+        USB_Reset();
+    }
+}
+
 int _write(int file, char *ptr, int len)
 {
 	for (uint32_t i=0; i<len; i++) {
@@ -74,19 +134,8 @@ int _write(int file, char *ptr, int len)
 
 int main(void)
 {
-    HAL_Init();
+    SystemReset();
     SystemClock_Config();
-
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
-
-    GPIO_InitTypeDef GpioSWOInit = {
-        .Pin = GPIO_PIN_3,
-        .Mode = GPIO_MODE_AF_PP,
-        .Pull = GPIO_NOPULL,
-        .Speed = GPIO_SPEED_FREQ_LOW,
-        .Alternate = GPIO_AF0_TRACE
-    };
-    HAL_GPIO_Init(GPIOB, &GpioSWOInit);
 
     LED_Init();
     LED_MODE(0, LED_MODE_SLOWPULSE2X);
