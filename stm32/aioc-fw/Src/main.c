@@ -79,8 +79,8 @@ static void SystemReset(void) {
     /* Clear reset flags */
     RCC->CSR |= RCC_CSR_RMVF;
 
-#if defined(SYSTEM_MEMORY_BASE)
     if (resetFlags & RCC_CSR_IWDGRSTF) {
+#if defined(SYSTEM_MEMORY_BASE)
         /* Reset cause was watchdog, which is used for rebooting into the bootloader.
            Set stack pointer to *SYSTEM_MEMORY_BASE
            and jump to *(SYSTEM_MEMORY_BASE + 4)
@@ -92,11 +92,11 @@ static void SystemReset(void) {
             :: [sp] "r" (*( (uint32_t*)(SYSTEM_MEMORY_BASE)     )),
                [pc] "r" (*( (uint32_t*)(SYSTEM_MEMORY_BASE + 4) ))
         );
-    }
 #else
     while(1)
         ;
 #endif
+    }
 
     /* Initialize HAL */
     HAL_Init();
