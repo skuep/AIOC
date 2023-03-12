@@ -16,6 +16,8 @@
 #warning Live DFU reboot not supported on this MCU
 #endif
 
+#define USB_RESET_DELAY     100 /* ms */
+
 static void SystemClock_Config(void)
 {
     HAL_StatusTypeDef status;
@@ -79,6 +81,24 @@ static void SystemReset(void) {
     /* Clear reset flags */
     RCC->CSR |= RCC_CSR_RMVF;
 
+    /* Reset USB if necessary */
+    if (!(resetFlags & RCC_CSR_PORRSTF)) {
+        /* Since the USB Pullup is hardwired to the supply voltage,
+         * the host (re-)enumerates our USB device only during Power-On-Reset.
+         * For all other reset causes, do a manual USB reset. */
+        USB_Reset();
+#if 1
+        /* Use SysTick to delay before continuing */
+        SysTick->LOAD  = ((uint32_t) USB_RESET_DELAY * (HAL_RCC_GetHCLKFreq() / 1000)) - 1;
+        SysTick->CTRL  = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
+
+        while (! (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) )
+            /* Wait for timer expiration */;
+
+        SysTick->CTRL  = 0x00000000; /* Reset SysTick */
+#endif
+    }
+
     if (resetFlags & RCC_CSR_IWDGRSTF) {
 #if defined(SYSTEM_MEMORY_BASE)
         /* Reset cause was watchdog, which is used for rebooting into the bootloader.
@@ -105,6 +125,7 @@ static void SystemReset(void) {
     __HAL_RCC_SYSCFG_CLK_ENABLE();
 
     /* Enable SWO debug output */
+    __HAL_RCC_GPIOB_CLK_ENABLE();
     GPIO_InitTypeDef GpioSWOInit = {
         .Pin = GPIO_PIN_3,
         .Mode = GPIO_MODE_AF_PP,
@@ -113,14 +134,6 @@ static void SystemReset(void) {
         .Alternate = GPIO_AF0_TRACE
     };
     HAL_GPIO_Init(GPIOB, &GpioSWOInit);
-
-    /* Reset USB if necessary */
-    if (!(resetFlags & RCC_CSR_PORRSTF)) {
-        /* Since the USB Pullup is hardwired to the supply voltage,
-         * the host (re-)enumerates our USB device only during Power-On-Reset.
-         * For all other reset causes, do a manual USB reset. */
-        USB_Reset();
-    }
 }
 
 int _write(int file, char *ptr, int len)

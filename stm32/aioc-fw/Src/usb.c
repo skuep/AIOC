@@ -134,8 +134,6 @@ void USB_Reset(void)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     GPIOA->BRR = GPIO_PIN_12;
-
-    HAL_Delay(USB_RESET_DELAY);
 }
 
 void USB_Init(void)

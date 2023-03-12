@@ -1,13 +1,12 @@
 #include "usb_dfu.h"
 #include "stm32f3xx_hal.h"
 #include "tusb.h"
-#include "usb.h"
 
 // Invoked on DFU_DETACH request to reboot to the bootloader
 void tud_dfu_runtime_reboot_to_dfu_cb(void)
 {
-    /* Reset USB and force reset via watchdog timer. */
-    USB_Reset();
+    /* Use the watchdog timer for a timed reset. This assures
+     * the host can close the open pipe before the device reboots. */
 
     IWDG_HandleTypeDef IWDGHandle = {
         .Instance = IWDG,
@@ -19,8 +18,4 @@ void tud_dfu_runtime_reboot_to_dfu_cb(void)
     };
 
     HAL_IWDG_Init(&IWDGHandle);
-
-    while(1) {
-        /* Wait for Reset */
-    }
 }
