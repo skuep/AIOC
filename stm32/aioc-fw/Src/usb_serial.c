@@ -6,36 +6,30 @@
 #include "ptt.h"
 #include "usb_descriptors.h"
 
-static void ControlPTT(uint8_t pttMask)
-{
-    if (pttMask != PTT_MASK_NONE) {
-        /* In case any PTT is asserted, disable UART transmitter due to those sharing the same lines */
-        __disable_irq();
-        USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_TE;
-        __enable_irq();
-    }
-
-    PTT_Control(pttMask);
-
-    if (pttMask == PTT_MASK_NONE) {
-        /* Enable UART transmitter again, when no PTT is asserted */
-        __disable_irq();
-        USB_SERIAL_UART->CR1 |= USART_CR1_TE;
-        __enable_irq();
-    }
-}
-
 void USB_SERIAL_UART_IRQ(void)
 {
     uint32_t ISR = USB_SERIAL_UART->ISR;
 
+    if (ISR & USART_ISR_TC) {
+        /* Transmission complete and no new data queued to send.
+         * Clear interrupt flag and further processing inside TXE Bit Handler.
+         * This is safe, because TXE bit will always be set, when TC bit is also set. */
+        USB_SERIAL_UART->ICR = USART_ICR_TCCF;
+    }
+
     if (ISR & USART_ISR_TXE) {
-        /* TX register is empty, load up another character */
+        /* TX register is empty, load up another character if there is one left in the buffer.
+         * Otherwise atomically shutdown the transmission. */
         __disable_irq();
         uint32_t available = tud_cdc_n_available(0);
         if (available == 0) {
-            /* No char left in fifo. Disable transmitter and TX-empty interrupt */
-            USB_SERIAL_UART->CR1 &= (uint32_t) ~(USART_CR1_TE | USART_CR1_TXEIE);
+            /* No char left in fifo. Disable the TX-empty interrupt and wait for transmission to complete */
+            USB_SERIAL_UART->CR1 &= (uint32_t) ~USART_CR1_TXEIE;
+
+            if (ISR & USART_ISR_TC) {
+                /* If TC is also set, all transmissions have completed, thus disable the transmitter. */
+                USB_SERIAL_UART->CR1 &= (uint32_t) ~(USART_CR1_TE | USART_CR1_TCIE);
+            }
         }
         __enable_irq();
 
@@ -91,13 +85,16 @@ void tud_cdc_rx_cb(uint8_t itf)
 {
     TU_ASSERT(itf == 0, /**/);
 
+    if (PTT_Status() != PTT_MASK_NONE) {
+        /* PTT is currently enabled. Disable all PTT action */
+        PTT_Control(PTT_MASK_NONE);
+    }
+
     /* This enables the transmitter and the TX-empty interrupt, which handles writing UART data */
     __disable_irq();
-    USB_SERIAL_UART->CR1 |= USART_CR1_TE | USART_CR1_TXEIE;
+    USB_SERIAL_UART->CR1 |= USART_CR1_TE | USART_CR1_TXEIE | USART_CR1_TCIE;
     __enable_irq();
 
-    /* Disable all PTT action */
-    ControlPTT(PTT_MASK_NONE);
 }
 
 // Invoked when space becomes available in TX buffer
@@ -160,7 +157,7 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
         TU_ASSERT(0, /**/);
     }
 
-    /* Re-enable UUART and IRQs */
+    /* Re-enable UART and IRQs */
     USB_SERIAL_UART->CR1 |= USART_CR1_UE;
     __enable_irq();
 }
@@ -177,7 +174,10 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
     pttMask |= (rts ? PTT_MASK_PTT2 : 0);
 #endif
 
-    ControlPTT(pttMask);
+    if (! (USB_SERIAL_UART->CR1 & USART_CR1_TE) ) {
+        /* Enable PTT only when UART transmitter is not currently transmitting */
+        PTT_Control(pttMask);
+    }
 }
 
 void USB_SerialInit(void)
