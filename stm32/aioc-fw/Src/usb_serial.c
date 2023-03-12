@@ -157,7 +157,7 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
         TU_ASSERT(0, /**/);
     }
 
-    /* Re-enable UART and IRQs */
+    /* Re-enable UART */
     USB_SERIAL_UART->CR1 |= USART_CR1_UE;
     __enable_irq();
 }
@@ -209,7 +209,7 @@ void USB_SerialInit(void)
     USB_SERIAL_UART->CR1 |= USART_CR1_UE;
 
     /* Enable interrupt */
-    NVIC_SetPriority(ADC1_2_IRQn, AIOC_IRQ_PRIO_SERIAL);
+    NVIC_SetPriority(USART1_IRQn, AIOC_IRQ_PRIO_SERIAL);
     NVIC_EnableIRQ(USART1_IRQn);
 }
 
