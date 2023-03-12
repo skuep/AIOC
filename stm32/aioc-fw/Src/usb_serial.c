@@ -168,11 +168,7 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
     TU_ASSERT(itf == 0, /**/);
 
     /* PTT Encoding logic */
-    uint8_t pttMask = (dtr ? PTT_MASK_PTT1 : 0);
-
-#if AIOC_ENABLE_PTT2
-    pttMask |= (rts ? PTT_MASK_PTT2 : 0);
-#endif
+    uint8_t pttMask = ((dtr && !rts) ? PTT_MASK_PTT1 : 0);
 
     if (! (USB_SERIAL_UART->CR1 & USART_CR1_TE) ) {
         /* Enable PTT only when UART transmitter is not currently transmitting */
