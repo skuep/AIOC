@@ -9,8 +9,7 @@ This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phas
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
 ## What does it do?
-The AIOC is a small adapter with a USB-C connector that enumerates itself as a sound-card (e.g. for APRS purposes) 
-and a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Talk).
+The AIOC is a small adapter with a USB-C connector that enumerates itself as a sound-card (e.g. for APRS purposes), a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Talk) as well as a CM108 compatible HID endpoint for CM108-style PTT (new in firmware version 1.2.0).
 
 You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTube channels below.
 
@@ -40,7 +39,6 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 - Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
 - Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
 - "High-Performance" VOX emulation with advanced features (e.g. pre-triggered VOX to activate PTT a few milliseconds before data, reduced tail time)
-- HID (maybe CM108 compatible) PTT control
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
@@ -81,6 +79,8 @@ For building the firmware, clone the repository and initialize the submodules. C
   - Select Project->Build All and the project should build. Use the Release build unless you specifically want to debug an issue
 
 ## How To Program
+### Initial programming
+The following steps are required for initial programming of the AIOC:
 - Short outermost pins on the programming header. This will set the device into bootloader mode in the next step.
 - Connect USB-C cable to the AIOC PCB
 - Use a tool like ``dfu-util`` to program the firmware binary from the GitHub Releases page like this:
@@ -90,21 +90,42 @@ For building the firmware, clone the repository and initialize the submodules. C
   __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb is installed on your system).
 - Remove short from first step, unplug and replug the device, it should now enumerate as the AIOC device
 
+### Firmware updating
+Once the AIOC has firmware loaded onto it, it can be re-programmed without the above BOOT sequence by following these steps.
+
+__Note__ This requires firmware version >= 1.2.0. For older firmwares, the initial programming sequence above is required for updating the firmware.
+- Run ``dfu-util`` like this
+  ````
+  dfu-util -d 1209:7388 -a 0 -s 0x08000000:leave -D aioc-fw-x-y-z.bin
+  ````
+
+This will reboot the AIOC into the bootloader automatically and perform the programming. 
+After that, it automatically reboots the AIOC into the newly programmed firmware.
+
+__Note__ Should you find yourself with a bricked AIOC, use the initial programming sequence above
+
 ## How To Use
-The serial interface of the AIOC enumerates as a regular COM (Windows) or ttyACM port (Linux) and can be used as such for programming the radio as well as PTT (Asserted on ``DTR=1``).
+The serial interface of the AIOC enumerates as a regular COM (Windows) or ttyACM port (Linux) and can be used as such for programming the radio as well as PTT (Asserted on ``DTR=1`` and ``RTS=0``).
+
+__Note__ before firmware version 1.2.0, PTT was asserted by ``DTR=1`` (ignoring RTS) which caused problems with certain radios when using the serial port for programming the radio e.g. using CHIRP.
 
 The soundcard interface of the AIOC gives access to the audio data channels. It has one mono microphone channel and one mono speaker channel and currently supports the following baudrates:
   - 48000 Hz (preferred)
+  - 32000 Hz
   - 24000 Hz
   - 22050 Hz (specifically for APRSdroid, has approx. 90 ppm of frequency error)
+  - 16000 Hz
   - 12000 Hz
   - 11025 Hz (has approx. 90 ppm of frequency error)
   - 8000 Hz
 
-USB HID based PTT control (and general configuration of the AIOC) is currently on the idea list. For further discussion go to GitHub issues.
+Since firmware version 1.2.0, a CM108 style PTT interface is available for public testing. This interface works in parallel to the COM-port PTT.
+Direwolf on Linux is confirmed working, please report any issues. Note that currently, Direwolf reports some warnings when using the CM108 PTT interface on the AIOC. 
+While they are annoying, they are safe to ignore and require changes in the upstream direwolf sourcecode. See https://github.com/wb2osz/direwolf/issues/448 for more details.
 
 ## Notes on Direwolf
-- Follow the regular setup guide with direwolf to determine the correct audio device to use
+- Follow the regular setup guide with direwolf to determine the correct audio device to use. 
+  For the serial and CM108 PTT interfaces on Linux, you need to set correct permissions on the ttyACM/hidraw devices. Consult Direwolf manual.
 - Configure the device as follows
   ````
   [...]
@@ -112,7 +133,8 @@ USB HID based PTT control (and general configuration of the AIOC) is currently o
   ADEVICE x 0           # <- Windows
   ARATE 48000
   [...]
-  PTT <port> DTR
+  PTT CM108             # <- Use the new CM108 compatible style PTT interface
+  PTT <port> DTR -RTS   # <- Alternatively use an old school serial device for PTT
   [...]
   ````
 
@@ -121,7 +143,7 @@ APRSdroid support has been added by AIOC by implementing support for the fixed 2
 It is important to notice, that the exact sample rate can not be achieved by the hardware, due to the 8 MHz crystal. 
 The actual sample rate used is 22052 Hz (which represents around 90 ppm of error). From my testing this does not seem to be a problem for APRS at all.
 
-However, since APRSdroid does not have any PTT control, sending data is currently not possible using the AIOC. See https://github.com/ge0rg/aprsdroid/issues/324.
+However, since APRSdroid does not have any PTT control, sending data is currently not possible using the AIOC except using the radio VOX function. See https://github.com/ge0rg/aprsdroid/issues/324.
 My previous experience is, that the Android kernel brings support for ttyACM devices (which is perfect for the AIOC) so implementing this feature for APRSdroid should theoretically be no problem.
 
 Ideas such as implementing a digital-modes-spefic VOX-emulation to workaround this problem and let the AIOC activate the PTT automatically are currently being considered. 
