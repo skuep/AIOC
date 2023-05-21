@@ -251,3 +251,32 @@ void USB_SerialTask(void)
 {
 
 }
+
+#include "device/usbd_pvt.h"
+
+bool USB_SerialSendLineState(uint8_t lineState)
+{
+#if 0
+    /* TODO: This causes issues with the stack if its being called before CDC was initialized? Crashes on terminal connect */
+    uint8_t const rhport = 0;
+    static uint8_t notification[10] = {
+        /* bmRequestType */ 0xA1,
+        /* bNotification */ 0x20,
+        /* wValue */ 0x00, 0x00,
+        /* wIndex */ ITF_NUM_CDC_0, 0x00,
+        /* wLength */ 0x02, 0x00,
+        /* Data */ 0x00, 0x00
+    };
+
+    notification[8] = lineState;
+    notification[9] = 0x00;
+
+    // claim endpoint
+    TU_VERIFY( usbd_edpt_claim(rhport, EPNUM_CDC_0_NOTIF) );
+
+    return usbd_edpt_xfer(rhport, EPNUM_CDC_0_NOTIF, notification, sizeof(notification));
+#else
+    return true;
+#endif
+}
+
