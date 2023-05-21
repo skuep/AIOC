@@ -69,18 +69,18 @@ uint8_t const desc_hid_report[] = {
       /* Volume Up/Dn */
       HID_LOGICAL_MIN ( 0x00                                    ),
       HID_LOGICAL_MAX ( 0x01                                    ),
-      HID_USAGE       ( 0xE9 /* Volume Inc */                   ),
-      HID_USAGE       ( 0xEA /* Volume Dec */                   ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_REPORT_SIZE ( 1                                       ),
       HID_REPORT_COUNT( 2                                       ),
       HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
       /* Mute */
-      HID_USAGE       ( 0xE2 /* Volume Mute */                  ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE  ),
       /* Hook Switch */
       HID_USAGE_PAGE  ( HID_USAGE_PAGE_TELEPHONY                ),
-      HID_USAGE       ( 0x20 /* Hook Switch */                  ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_REPORT_COUNT( 1                                       ),
       HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE | HID_NULL_STATE),
       /* Filler */
