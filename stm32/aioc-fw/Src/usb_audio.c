@@ -3,6 +3,8 @@
 #include "aioc.h"
 #include "tusb.h"
 #include "usb.h"
+#include "ptt.h"
+#include "cos.h"
 #include <math.h>
 
 /* The one and only supported sample rate */
@@ -15,6 +17,12 @@
 #define SPEAKER_BUFLVL_FB_COUPLING 1
 /* We try to stay on this target with the buffer level */
 #define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB and maximum sample rate */
+
+#define PTT_THRESHOLD           16
+#define PTT_TIMEOUT             10000 /* us */
+
+#define COS_THRESHOLD           (16 << 4)
+#define COS_TIMEOUT             10000 /* us */
 
 typedef enum {
     SAMPLERATE_48000, /* The high-quality default */
@@ -644,6 +652,12 @@ void ADC1_2_IRQHandler (void)
         /* Get ADC sample */
         int16_t sample = ((int32_t) ADC2->DR - 32768) & 0xFFFFU;
 
+        /* Automatic COS */
+        if (!microphoneMute[1] && ( (sample > COS_THRESHOLD) || (sample < -COS_THRESHOLD) )) {
+            /* Reset timeout and make sure timer is enabled */
+            TIM17->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
+        }
+
         /* Get volume */
         uint16_t volume = !microphoneMute[1] ? microphoneLinVolume[1] : 0;
 
@@ -664,6 +678,12 @@ void TIM6_DAC_IRQHandler(void)
         /* Read from FIFO, leave sample at 0 if fifo empty */
         tud_audio_read(&sample, sizeof(sample));
 
+        /* Automatic PTT */
+        if (!speakerMute[1] && ( (sample > PTT_THRESHOLD) || (sample < -PTT_THRESHOLD) )) {
+            /* Reset timeout and make sure timer is enabled */
+            TIM16->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
+        }
+
         /* Get volume */
         uint16_t volume = !speakerMute[1] ? speakerLinVolume[1] : 0;
 
@@ -673,6 +693,50 @@ void TIM6_DAC_IRQHandler(void)
         /* Load DAC holding register with sample */
         DAC1->DHR12L1 = ((int32_t) sample + 32768) & 0xFFFFU;
     }
+}
+
+void TIM16_IRQHandler(void)
+{
+    /* This is a timeout counter for the automatic PTT function */
+    uint32_t flags = TIM16->SR;
+
+    if (flags & TIM_SR_UIF) {
+        /* Timer was reset (via the EGR register). */
+        uint32_t cr = TIM16->CR1;
+        if (!(cr & TIM_CR1_CEN)) {
+            /* If timer was not enabled previously, enable timer and assert PTT */
+            TIM16->CR1 = cr | TIM_CR1_CEN;
+            PTT_Control(PTT_MASK_PTT1);
+        }
+    } else if (flags & TIM_SR_CC1IF) {
+        /* The idle timeout (without any action on the DAC) was reached. Disable timer and deassert PTT */
+        TIM16->CR1 &= ~TIM_CR1_CEN;
+        PTT_Control(PTT_MASK_NONE);
+    }
+
+    TIM16->SR = ~flags;
+}
+
+void TIM17_IRQHandler(void)
+{
+    /* This is a timeout counter for the automatic COS function */
+    uint32_t flags = TIM17->SR;
+
+    if (flags & TIM_SR_UIF) {
+        /* Timer was reset (via the EGR register). */
+        uint32_t cr = TIM17->CR1;
+        if (!(cr & TIM_CR1_CEN)) {
+            /* If timer was not enabled previously, enable timer and notify host of COS */
+            TIM17->CR1 = cr | TIM_CR1_CEN;
+            COS_SetState(0x01);
+        }
+    } else if (flags & TIM_SR_CC1IF) {
+        /* The idle timeout (without any action on the ADC) was reached. Disable timer and notify host */
+        TIM17->CR1 &= ~TIM_CR1_CEN;
+        COS_SetState(0x00);
+    }
+
+    TIM17->SR = ~flags;
 }
 
 static void GPIO_Init(void)
@@ -808,6 +872,31 @@ static void DAC_Init(void)
     DAC->CR = (0x0 << DAC_CR_TSEL1_Pos) | DAC_CR_TEN1 | DAC_CR_EN1;
 }
 
+static void Timeout_Timers_Init()
+{
+    uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK2Freq()) ? HAL_RCC_GetPCLK2Freq() : 2 * HAL_RCC_GetPCLK2Freq();
+
+    __HAL_RCC_TIM16_CLK_ENABLE();
+    __HAL_RCC_TIM17_CLK_ENABLE();
+
+   /* TIM16 and TIM17 are timeout-counters for PTT and COS */
+   TIM16->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP;
+   TIM16->PSC = timerFreq / 1000000 - 1; /* Microseconds counter */
+   TIM16->CCR1 = PTT_TIMEOUT - 1;
+   TIM16->DIER = TIM_DIER_UIE | TIM_DIER_CC1IE;
+
+   TIM17->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP;
+   TIM17->PSC = timerFreq / 1000000 - 1; /* Microseconds counter */
+   TIM17->CCR1 = COS_TIMEOUT - 1;
+   TIM17->DIER = TIM_DIER_UIE | TIM_DIER_CC1IE;
+
+   NVIC_SetPriority(TIM16_IRQn, AIOC_IRQ_PRIO_AUDIO);
+   NVIC_EnableIRQ(TIM16_IRQn);
+
+   NVIC_SetPriority(TIM17_IRQn, AIOC_IRQ_PRIO_AUDIO);
+   NVIC_EnableIRQ(TIM17_IRQn);
+}
+
 void USB_AudioInit(void)
 {
     GPIO_Init();
@@ -815,6 +904,8 @@ void USB_AudioInit(void)
     Timer_DAC_Init();
     ADC_Init();
     DAC_Init();
+
+    Timeout_Timers_Init();
 }
 
 void USB_AudioGetSpeakerFeedbackStats(usb_audio_fbstats_t * status)
