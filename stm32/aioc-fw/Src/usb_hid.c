@@ -6,23 +6,24 @@
 
 #define USB_HID_INOUT_REPORT_LEN  4
 
+static uint8_t buttonState = 0x00;
 static uint8_t gpioState = 0x00;
 
 static void MakeReport(uint8_t * buffer)
 {
     /* TODO: Read the actual states of the GPIO input hardware pins. */
-    buffer[0] = 0x00;
+    buffer[0] = buttonState & 0x0F;
     buffer[1] = gpioState;
     buffer[2] = 0x00;
     buffer[3] = 0x00;
 }
 
-static void SendReport(void)
+static bool SendReport(void)
 {
     uint8_t reportBuffer[USB_HID_INOUT_REPORT_LEN];
     MakeReport(reportBuffer);
 
-    tud_hid_report(0, reportBuffer, sizeof(reportBuffer));
+    return tud_hid_report(0, reportBuffer, sizeof(reportBuffer));
 }
 
 static void ControlPTT(uint8_t gpio)
@@ -159,4 +160,11 @@ void USB_HIDInit(void)
 {
 
 
+}
+
+bool USB_HIDSendButtonState(uint8_t buttonMask)
+{
+    buttonState = buttonMask;
+
+    return SendReport();
 }
