@@ -43,7 +43,7 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
 ## Buy a pre-made AIOC
-[![Buy the AIOC](https://i.imgur.com/junobMh.png)](https://w1btr.com/index.php/product-category/accessories/ "Purchase an AIOC from Lucas W1BTR")
+[![Buy the AIOC](https://i.imgur.com/0zJsVmk.png)](https://w1btr.com/index.php/product-category/accessories/ "Purchase an AIOC from Lucas W1BTR")
 
 Lucas W1BTR sells AIOCs with tons of options and some chosen accessories on his website https://w1btr.com
 
