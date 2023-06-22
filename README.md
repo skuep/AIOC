@@ -16,14 +16,26 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 [![All In One Cable AIOC - Ham Nuggets Season 4 Episode 8 S04E08](http://img.youtube.com/vi/RZjoPNe634o/0.jpg)](http://www.youtube.com/watch?v=RZjoPNe634o "All In One Cable AIOC - Ham Nuggets Season 4 Episode 8 S04E08")
 [![Your BAOFENG Programming Cable Sucks! - Get This! - AIOC All in One Cable](http://img.youtube.com/vi/xRCmXQYRLE0/0.jpg)](http://www.youtube.com/watch?v=xRCmXQYRLE0 "Your BAOFENG Programming Cable Sucks! - Get This! - AIOC All in One Cable")
 
-## Features ##
-- Cheap & Hackable Digital mode USB interface (similar to digirig, mobilinkd, etc...)
-- Programming Cable Function via virtual Serial Port
-- Compact form-factor (DIY overmolded enclosure is currently TBD)
+# Features #
 - Based on easy-to-hack STM32F302 with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
-- Can support Dual-PTT HTs
+- Easy to upload firmware updates and changes
+- Easy to solder custom connectors
+- Cheap & Hackable, compact and durable design (DIY overmolded enclosure is currently TBD)
+### Standard Interface Firmware ###
+- Digital mode USB interface (similar to digirig, mobilinkd, etc...)
+- Programming Cable Function via virtual Serial Port
+- No annoying prolific drivers or tinkering required. Just plug in, and go.
+- CAT Control for radios if paired with custom connector
+- Dual PTT Support
+### *NEW* Virtual VOX / Automatic PTT Firmware ###
+- Easy, plug & play setup (no confusing COM ports)
+- Automatically triggers PTT when audio is detected (similar to a SignaLink)
+- Compatible with APRSDroid
+- Does **not** support radio programming or cat control
+- Currently a 10ms hardcoded timeout (after 10ms of no digital fsk audio from PC, it drops PTT)
+- Currently in early beta and is a work in progress
 
-## Compatibility
+# Compatibility #
 ### Software
   - [Direwolf](#notes-on-direwolf) as AX.25 modem/APRS en+decoder/...
   - [APRSdroid](#notes-on-aprsdroid) as APRS en+decoder
@@ -33,12 +45,12 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 ### Tested Radios (so far)
   - Wouxun UV-9D Mate (CHIRP + APRS)
   - Baofeng UV-5R (CHIRP + APRS)
-  - BTECH 6X2 (CHIRP) 
+  - BTECH 6X2 (CHIRP)
+  - Quansheng UV-K5 (CHIRP + APRS)
 
 ## Future Work ##
 - Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
 - Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
-- "High-Performance" VOX emulation with advanced features (e.g. pre-triggered VOX to activate PTT a few milliseconds before data, reduced tail time)
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
@@ -148,14 +160,13 @@ APRSdroid support has been added by AIOC by implementing support for the fixed 2
 It is important to notice, that the exact sample rate can not be achieved by the hardware, due to the 8 MHz crystal. 
 The actual sample rate used is 22052 Hz (which represents around 90 ppm of error). From my testing this does not seem to be a problem for APRS at all.
 
-However, since APRSdroid does not have any PTT control, sending data is currently not possible using the AIOC except using the radio VOX function. See https://github.com/ge0rg/aprsdroid/issues/324.
+To send data, the beta Automatic PTT firmware must be used, as APRSDroid does not support PTT control so sending data is not possible with the standard firmware.
+
+This limitation is shared with the Digirig and other similar interfaces until PTT support is added to APRSDroid - See https://github.com/ge0rg/aprsdroid/issues/324.
 My previous experience is, that the Android kernel brings support for ttyACM devices (which is perfect for the AIOC) so implementing this feature for APRSdroid should theoretically be no problem.
 
-Ideas such as implementing a digital-modes-spefic VOX-emulation to workaround this problem and let the AIOC activate the PTT automatically are currently being considered. 
-Voice your opinion and ideas in the GitHub issues if this seems interesting to you.
-
 ## Notes on CHIRP
-CHIRP is a very popuplar open-source programming software that supports a very wide array of HT radios. You can use CHIRP just as you would like with a regular programming cable.
+CHIRP is a very popular open-source programming software that supports a very wide array of HT radios. You can use CHIRP just as you would like with a regular programming cable.
 
 Download:
   - Start CHIRP
