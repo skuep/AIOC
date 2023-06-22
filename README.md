@@ -50,6 +50,7 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 
 ## Future Work ##
 - Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
+- Possible a console or the something similar to change settings such as CM108 style vs Automatic PTT style firmware on the fly.
 - Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
@@ -98,28 +99,27 @@ For building the firmware, clone the repository and initialize the submodules. C
 ## How To Program
 ### Initial programming
 The following steps are required for initial programming of the AIOC:
-- Short outermost pins on the programming header. This will set the device into bootloader mode in the next step.
+- **Short outermost pins on the programming header**. This will set the device into bootloader mode in the next step (not required for firmware updates).
 - Connect USB-C cable to the AIOC PCB
 - Use a tool like ``dfu-util`` to program the firmware binary from the GitHub Releases page like this:
   ````
   dfu-util -a 0 -s 0x08000000 -D aioc-fw-x-y-z.bin
   ````
-  __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb is installed on your system).
+  __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb and dfu-util is installed on your system).
 - Remove short from first step, unplug and replug the device, it should now enumerate as the AIOC device
 
 ### Firmware updating
 Once the AIOC has firmware loaded onto it, it can be re-programmed without the above BOOT sequence by following these steps.
-
-__Note__ This requires firmware version >= 1.2.0. For older firmwares, the initial programming sequence above is required for updating the firmware.
 - Run ``dfu-util`` like this
   ````
   dfu-util -d 1209:7388 -a 0 -s 0x08000000:leave -D aioc-fw-x-y-z.bin
   ````
+__Note__ Updating requires firmware version >= 1.2.0. For older firmwares, the initial programming sequence above including shorting the outermost pins is required for updating the firmware.
 
 This will reboot the AIOC into the bootloader automatically and perform the programming. 
 After that, it automatically reboots the AIOC into the newly programmed firmware.
 
-__Note__ Should you find yourself with a bricked AIOC, use the initial programming sequence above
+__Note__ Should you find yourself with a bricked AIOC, use the initial programming sequence above.
 
 ## How To Use
 The serial interface of the AIOC enumerates as a regular COM (Windows) or ttyACM port (Linux) and can be used as such for programming the radio as well as PTT (Asserted on ``DTR=1`` and ``RTS=0``).
@@ -175,5 +175,4 @@ Download:
 
 Upload:
   - Select Radio->Upload to Radio
-  - That's it
-
+  - That's it!
