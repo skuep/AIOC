@@ -58,7 +58,7 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
   - Look Through components, see if something is missing or problematic and press Next
   - Check everything looks roughly good (rotations are already baked-in and should be correct). Save to Cart
 
-This gives you 5 (or more) SMD assembled AIOC. The only thing left to do is soldering on the TRS connectors (see [here](#how-to-build)).
+This gives you 5 (or more) SMD assembled AIOC. The only thing left to do is soldering on the TRS connectors (see [here](#how-to-assemble)).
 The total bill should be around 60$ US for 5 pieces plus tax and shipping from China.
 
 ## How To Assemble
