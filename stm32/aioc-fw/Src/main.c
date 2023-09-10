@@ -145,6 +145,34 @@ int _write(int file, char *ptr, int len)
 	return len;
 }
 
+void _close(void)
+{
+}
+
+void _lseek(void)
+{
+}
+
+void _read(void)
+{
+}
+
+void _fstat(void)
+{
+}
+
+void _getpid(void)
+{
+}
+
+void _isatty(void)
+{
+}
+
+void _kill(void)
+{
+}
+
 int main(void)
 {
     SystemReset();
