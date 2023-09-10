@@ -1,6 +1,7 @@
 #include "usb_hid.h"
 #include "tusb.h"
 #include "ptt.h"
+#include "settings.h"
 #include "usb_descriptors.h"
 
 #define USB_HID_INOUT_REPORT_LEN  4
@@ -26,9 +27,39 @@ static void SendReport(void)
 
 static void ControlPTT(uint8_t gpio)
 {
-    /* PTT1 on GPIO 3, PTT2 on GPIO4 */
-    uint8_t pttMask = (gpio & 0x04 ? PTT_MASK_PTT1 : 0) |
-                      (gpio & 0x08 ? PTT_MASK_PTT2 : 0);
+    uint8_t pttMask = PTT_MASK_NONE;
+
+    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_CM108GPIO1_MASK) {
+        pttMask |= gpio & 0x01 ? PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_CM108GPIO2_MASK) {
+        pttMask |= gpio & 0x02 ? PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_CM108GPIO3_MASK) {
+        pttMask |= gpio & 0x04 ? PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_CM108GPIO4_MASK) {
+        pttMask |= gpio & 0x08 ? PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_CM108GPIO1_MASK) {
+        pttMask |= gpio & 0x01 ? PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_CM108GPIO2_MASK) {
+        pttMask |= gpio & 0x02 ? PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_CM108GPIO3_MASK) {
+        pttMask |= gpio & 0x04 ? PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_CM108GPIO4_MASK) {
+        pttMask |= gpio & 0x08 ? PTT_MASK_PTT2 : 0;
+    }
 
     PTT_Control(pttMask);
 }
@@ -51,8 +82,7 @@ uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t
           return USB_HID_INOUT_REPORT_LEN;
 
       case HID_REPORT_TYPE_FEATURE:
-          /* Custom extension for configuring the AIOC */
-          break;
+          return Settings_RegRead(report_id, buffer, reqlen);
 
       default:
           TU_BREAKPOINT();
@@ -94,7 +124,28 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
             break;
 
         case HID_REPORT_TYPE_FEATURE:
-            /* Custom extension for configuring the AIOC */
+            if (report_id == 0) {
+                /* Special HID feature report case. Not a valid register map address to write.
+                 * It is used for other functions (store, recall, defaults...) */
+                uint32_t data = (   (((uint32_t) buffer[0]) << 0) |
+                                    (((uint32_t) buffer[1]) << 8) |
+                                    (((uint32_t) buffer[2]) << 16) |
+                                    (((uint32_t) buffer[3]) << 24) );
+
+                if (data & 0x00000010UL) {
+                    Settings_Default();
+                }
+
+                if (data & 0x00000040UL) {
+                    Settings_Recall();
+                }
+
+                if (data & 0x00000080UL) {
+                    Settings_Store();
+                }
+            } else {
+                Settings_RegWrite(report_id, buffer, bufsize);
+            }
             break;
 
         default:
