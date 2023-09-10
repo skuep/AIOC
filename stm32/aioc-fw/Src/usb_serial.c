@@ -47,8 +47,8 @@ void USB_SERIAL_UART_IRQ(void)
         /* RX register is not empty, get character and put into USB send buffer */
         if (tud_cdc_n_write_available(0) > 0) {
             uint8_t c = USB_SERIAL_UART->RDR;
-            if (PTT_Status() == PTT_MASK_NONE) {
-                /* Only store character when no PTT is asserted (shares the same pin) */
+            if (!(PTT_Status() & PTT_MASK_PTT1) ) {
+                /* Only store character when no PTT1 is asserted (shares the same pin) */
                 tud_cdc_n_write(0, &c, 1);
                 LED_MODE(0, LED_MODE_FASTPULSE);
             }
@@ -86,9 +86,11 @@ void tud_cdc_rx_cb(uint8_t itf)
 {
     TU_ASSERT(itf == 0, /**/);
 
-    if (PTT_Status() != PTT_MASK_NONE) {
-        /* PTT is currently enabled. Disable all PTT action */
-        PTT_Control(PTT_MASK_NONE);
+    uint8_t pttStatus = PTT_Status();
+
+    if (pttStatus & PTT_MASK_PTT1) {
+        /* Make sure PTT1 is disabled, since it shares signal lines with the serial interface */
+        PTT_Control(pttStatus & ~PTT_MASK_PTT1);
     }
 
     /* This enables the transmitter and the TX-empty interrupt, which handles writing UART data */
