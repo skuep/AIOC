@@ -26,7 +26,6 @@ static inline void PTT_Control(uint8_t pttMask)
         LED_SET(1, 0);
     }
 
-#if AIOC_ENABLE_PTT2
     if (pttMask & PTT_MASK_PTT2) {
         PTT_GPIO->BSRR = PTT_PIN_PTT2;
         LED_SET(0, 1);
@@ -34,7 +33,6 @@ static inline void PTT_Control(uint8_t pttMask)
         PTT_GPIO->BRR = PTT_PIN_PTT2;
         LED_SET(0, 0);
     }
-#endif
 
     __enable_irq();
 }

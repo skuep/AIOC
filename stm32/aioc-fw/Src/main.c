@@ -1,5 +1,6 @@
 #include "stm32f3xx_hal.h"
 #include "aioc.h"
+#include "settings.h"
 #include "led.h"
 #include "ptt.h"
 #include "usb.h"
@@ -177,6 +178,8 @@ int main(void)
 {
     SystemReset();
     SystemClock_Config();
+
+    Settings_Init();
 
     LED_Init();
     LED_MODE(0, LED_MODE_SLOWPULSE2X);

@@ -6,6 +6,4 @@
 #define AIOC_IRQ_PRIO_SERIAL     3
 #define AIOC_IRQ_PRIO_AUDIO      2
 
-//#define AIOC_ENABLE_PTT2
-
 #endif /* AIOC_H_ */

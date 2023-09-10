@@ -4,6 +4,7 @@
 #include "tusb.h"
 #include "led.h"
 #include "ptt.h"
+#include "settings.h"
 #include "usb_descriptors.h"
 
 void USB_SERIAL_UART_IRQ(void)
@@ -167,8 +168,39 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
     TU_ASSERT(itf == 0, /**/);
 
-    /* PTT Encoding logic */
-    uint8_t pttMask = ((dtr && !rts) ? PTT_MASK_PTT1 : 0);
+    uint8_t pttMask = PTT_MASK_NONE;
+
+    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_SERIALDTR_MASK) {
+        pttMask |= dtr ? PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_SERIALRTS_MASK) {
+        pttMask |= rts ? PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_SERIALDTRNRTS_MASK) {
+        pttMask |= (dtr && !rts) ? PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_SERIALNDTRRTS_MASK) {
+        pttMask |= (!dtr && rts) ? PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_SERIALDTR_MASK) {
+        pttMask |= dtr ? PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_SERIALRTS_MASK) {
+        pttMask |= rts ? PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_SERIALDTRNRTS_MASK) {
+        pttMask |= (dtr && !rts) ? PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_SERIALNDTRRTS_MASK) {
+        pttMask |= (!dtr && rts) ? PTT_MASK_PTT2 : 0;
+    }
 
     if (! (USB_SERIAL_UART->CR1 & USART_CR1_TE) ) {
         /* Enable PTT only when UART transmitter is not currently transmitting */
