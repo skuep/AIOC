@@ -63,7 +63,7 @@ The total bill should be around 60$ US for 5 pieces plus tax and shipping from C
 
 ## How To Assemble
 This is the process I use for building. See photographs in ``images`` folder.
-- You need to use Monacor PG-204P and PG-203P or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection)
+- You need to use **Monacor** ``PG-204P`` and ``PG-203P`` or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection). **Adafruit** products ``1800`` and ``1798`` are confirmed to work as well.
 - Cut the 2.5mm and 3.5mm TRS sleeve tab where the hole is located
 - Put both TRS connectors into the 3d-printed solder guide (or a cheap HT that you don't mind potentially damaging). Make sure, that they are seated all the way in. If the holes in the solder guide are too small, you can ream them using a 2.5mm and 3.5mm drill bit.
 - Insert the AIOC PCB into the solder guide
