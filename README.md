@@ -56,6 +56,7 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
   - Click "Add CPL File" and upload ``CPL-k1-aioc.csv``
   - Press Next
   - Look Through components, see if something is missing or problematic and press Next
+  - You may recieve and error, "H1.H2designators don't exist in the BOM file. J2,D3,D4,R17 designators don't exist in the CPL file", this can safely be ignored.
   - Check everything looks roughly good (rotations are already baked-in and should be correct). Save to Cart
 
 This gives you 5 (or more) SMD assembled AIOC. The only thing left to do is soldering on the TRS connectors (see [here](#how-to-assemble)).
