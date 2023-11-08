@@ -61,6 +61,13 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 This gives you 5 (or more) SMD assembled AIOC. The only thing left to do is soldering on the TRS connectors (see [here](#how-to-assemble)).
 The total bill should be around 60$ US for 5 pieces plus tax and shipping from China.
 
+Note that the following message from JLCPCB is okay and can be ignored.
+````
+The below parts won't be assembled due to data missing.
+H1,H2 designators don't exist in the BOM file.
+J2,D3,D4,R17 designators don't exist in the CPL file.
+````
+
 ## How To Assemble
 This is the process I use for building. See photographs in ``images`` folder.
 - You need to use **Monacor** ``PG-204P`` and ``PG-203P`` or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection). **Adafruit** products ``1800`` and ``1798`` are confirmed to work as well.
