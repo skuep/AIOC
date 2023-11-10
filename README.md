@@ -84,6 +84,7 @@ For building the firmware, clone the repository and initialize the submodules. C
   - Start STM32CubeIDE and create a new workspace under ``<project-root>/stm32``
   - Choose File->Import and import the ``aioc-fw`` project in the same folder without copying
   - Select Project->Build All and the project should build. Use the Release build unless you specifically want to debug an issue
+  - A 3D printed case is available and can be found [here](https://www.thingiverse.com/thing:6144997).
 
 ## How To Program
 ### Initial programming
