@@ -100,6 +100,7 @@ void Settings_Recall(void)
 void Settings_Default(void)
 {
     settingsRegMap[SETTINGS_REG_MAGIC] = SETTINGS_REG_MAGIC_DEFAULT;
+    settingsRegMap[SETTINGS_REG_USBID] = SETTINGS_REG_USBID_DEFAULT;
     settingsRegMap[SETTINGS_REG_PTT1] = SETTINGS_REG_PTT1_DEFAULT;
     settingsRegMap[SETTINGS_REG_PTT2] = SETTINGS_REG_PTT2_DEFAULT;
 }

@@ -24,12 +24,13 @@
  */
 #include "tusb.h"
 #include "usb_descriptors.h"
+#include "settings.h"
 #include "stm32f3xx_hal.h"
 
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
-tusb_desc_device_t const desc_device = {
+tusb_desc_device_t desc_device = {
     .bLength = sizeof(tusb_desc_device_t),
     .bDescriptorType    = TUSB_DESC_DEVICE,
     .bcdUSB             = USB_BCD,
@@ -49,6 +50,10 @@ tusb_desc_device_t const desc_device = {
 // Invoked when received GET DEVICE DESCRIPTOR
 // Application return pointer to descriptor
 uint8_t const* tud_descriptor_device_cb(void) {
+    /* Get up-to-date USB settings */
+    desc_device.idVendor  = (settingsRegMap[SETTINGS_REG_USBID] >> SETTINGS_REG_USBID_VID_OFFS) & SETTINGS_REG_USBID_VID_MASK;
+    desc_device.idProduct = (settingsRegMap[SETTINGS_REG_USBID] >> SETTINGS_REG_USBID_PID_OFFS) & SETTINGS_REG_USBID_PID_MASK;
+
     return (uint8_t const*) &desc_device;
 }
 
