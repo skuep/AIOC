@@ -47,8 +47,11 @@ void USB_SERIAL_UART_IRQ(void)
         /* RX register is not empty, get character and put into USB send buffer */
         if (tud_cdc_n_write_available(0) > 0) {
             uint8_t c = USB_SERIAL_UART->RDR;
-            if (!(PTT_Status() & PTT_MASK_PTT1) ) {
-                /* Only store character when no PTT1 is asserted (shares the same pin) */
+            uint8_t pttStatus = PTT_Status();
+            uint8_t pttRxIgnoreMask = (settingsRegMap[SETTINGS_REG_SERIAL_CTRL] & SETTINGS_REG_SERIAL_CTRL_RXIGNPTT_MASK) >> SETTINGS_REG_SERIAL_CTRL_RXIGNPTT_OFFS;
+
+            if (!(pttStatus & pttRxIgnoreMask) ) {
+                /* Only store character when none of the enabled PTTs are asserted (shares the same pin) */
                 tud_cdc_n_write(0, &c, 1);
                 LED_MODE(0, LED_MODE_FASTPULSE);
             }
@@ -87,10 +90,11 @@ void tud_cdc_rx_cb(uint8_t itf)
     TU_ASSERT(itf == 0, /**/);
 
     uint8_t pttStatus = PTT_Status();
+    uint8_t pttTxForceMask = (settingsRegMap[SETTINGS_REG_SERIAL_CTRL] & SETTINGS_REG_SERIAL_CTRL_TXFRCPTT_MASK) >> SETTINGS_REG_SERIAL_CTRL_TXFRCPTT_OFFS;
 
-    if (pttStatus & PTT_MASK_PTT1) {
-        /* Make sure PTT1 is disabled, since it shares signal lines with the serial interface */
-        PTT_Control(pttStatus & ~PTT_MASK_PTT1);
+    if (pttStatus & pttTxForceMask) {
+        /* Make sure the selected PTTs are disabled, since they might share a signal with the UART lines */
+        PTT_Control(pttStatus & ~pttTxForceMask);
     }
 
     /* This enables the transmitter and the TX-empty interrupt, which handles writing UART data */
@@ -172,35 +176,35 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 
     uint8_t pttMask = PTT_MASK_NONE;
 
-    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_SERIALDTR_MASK) {
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_SERIALDTR_MASK) {
         pttMask |= dtr ? PTT_MASK_PTT1 : 0;
     }
 
-    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_SERIALRTS_MASK) {
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_SERIALRTS_MASK) {
         pttMask |= rts ? PTT_MASK_PTT1 : 0;
     }
 
-    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_SERIALDTRNRTS_MASK) {
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_SERIALDTRNRTS_MASK) {
         pttMask |= (dtr && !rts) ? PTT_MASK_PTT1 : 0;
     }
 
-    if (settingsRegMap[SETTINGS_REG_PTT1] & SETTINGS_REG_PTT1_SRC_SERIALNDTRRTS_MASK) {
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_SERIALNDTRRTS_MASK) {
         pttMask |= (!dtr && rts) ? PTT_MASK_PTT1 : 0;
     }
 
-    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_SERIALDTR_MASK) {
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_SERIALDTR_MASK) {
         pttMask |= dtr ? PTT_MASK_PTT2 : 0;
     }
 
-    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_SERIALRTS_MASK) {
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_SERIALRTS_MASK) {
         pttMask |= rts ? PTT_MASK_PTT2 : 0;
     }
 
-    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_SERIALDTRNRTS_MASK) {
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_SERIALDTRNRTS_MASK) {
         pttMask |= (dtr && !rts) ? PTT_MASK_PTT2 : 0;
     }
 
-    if (settingsRegMap[SETTINGS_REG_PTT2] & SETTINGS_REG_PTT2_SRC_SERIALNDTRRTS_MASK) {
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_SERIALNDTRRTS_MASK) {
         pttMask |= (!dtr && rts) ? PTT_MASK_PTT2 : 0;
     }
 
