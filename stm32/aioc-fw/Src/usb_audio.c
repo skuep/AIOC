@@ -18,11 +18,6 @@
 /* We try to stay on this target with the buffer level */
 #define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB and maximum sample rate */
 
-#define PTT_THRESHOLD           16
-#define PTT_TIMEOUT             10000 /* us */
-
-#define COS_THRESHOLD           (16 << 4)
-#define COS_TIMEOUT             10000 /* us */
 
 typedef enum {
     SAMPLERATE_48000, /* The high-quality default */
@@ -653,7 +648,9 @@ void ADC1_2_IRQHandler (void)
         int16_t sample = ((int32_t) ADC2->DR - 32768) & 0xFFFFU;
 
         /* Automatic COS */
-        if (!microphoneMute[1] && ( (sample > COS_THRESHOLD) || (sample < -COS_THRESHOLD) )) {
+        uint16_t cosThreshold = (settingsRegMap[SETTINGS_REG_VCOS_LVLCTRL] & SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_OFFS;
+
+        if (!microphoneMute[1] && ( (sample > cosThreshold) || (sample < -cosThreshold) )) {
             /* Reset timeout and make sure timer is enabled */
             TIM17->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
         }
@@ -679,7 +676,9 @@ void TIM6_DAC_IRQHandler(void)
         tud_audio_read(&sample, sizeof(sample));
 
         /* Automatic PTT */
-        if (!speakerMute[1] && ( (sample > PTT_THRESHOLD) || (sample < -PTT_THRESHOLD) )) {
+        uint16_t pttThreshold = (settingsRegMap[SETTINGS_REG_VPTT_LVLCTRL] & SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_OFFS;
+
+        if (!speakerMute[1] && ( (sample > pttThreshold) || (sample < -pttThreshold) )) {
             /* Reset timeout and make sure timer is enabled */
             TIM16->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
         }
@@ -706,7 +705,11 @@ void TIM16_IRQHandler(void)
         if (!(cr & TIM_CR1_CEN)) {
             /* If timer was not enabled previously, enable timer and assert PTT */
             TIM16->CR1 = cr | TIM_CR1_CEN;
-            PTT_Control(PTT_MASK_PTT1);
+
+            uint8_t pttMask = PTT_MASK_NONE;
+            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_VPTT_MASK ? PTT_MASK_PTT1 : 0;
+            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_VPTT_MASK ? PTT_MASK_PTT2 : 0;
+            PTT_Control(pttMask);
         }
     } else if (flags & TIM_SR_CC1IF) {
         /* The idle timeout (without any action on the DAC) was reached. Disable timer and deassert PTT */
@@ -875,6 +878,8 @@ static void DAC_Init(void)
 static void Timeout_Timers_Init()
 {
     uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK2Freq()) ? HAL_RCC_GetPCLK2Freq() : 2 * HAL_RCC_GetPCLK2Freq();
+    uint32_t pttTimeout = (settingsRegMap[SETTINGS_REG_VPTT_TIMCTRL] & SETTINGS_REG_VPTT_TIMCTRL_TIMEOUT_MASK) >> SETTINGS_REG_VPTT_TIMCTRL_TIMEOUT_OFFS;
+    uint32_t cosTimeout = (settingsRegMap[SETTINGS_REG_VCOS_TIMCTRL] & SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_MASK) >> SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_OFFS;
 
     __HAL_RCC_TIM16_CLK_ENABLE();
     __HAL_RCC_TIM17_CLK_ENABLE();
@@ -882,12 +887,12 @@ static void Timeout_Timers_Init()
    /* TIM16 and TIM17 are timeout-counters for PTT and COS */
    TIM16->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP;
    TIM16->PSC = timerFreq / 1000000 - 1; /* Microseconds counter */
-   TIM16->CCR1 = PTT_TIMEOUT - 1;
+   TIM16->CCR1 = pttTimeout - 1;
    TIM16->DIER = TIM_DIER_UIE | TIM_DIER_CC1IE;
 
    TIM17->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP;
    TIM17->PSC = timerFreq / 1000000 - 1; /* Microseconds counter */
-   TIM17->CCR1 = COS_TIMEOUT - 1;
+   TIM17->CCR1 = cosTimeout - 1;
    TIM17->DIER = TIM_DIER_UIE | TIM_DIER_CC1IE;
 
    NVIC_SetPriority(TIM16_IRQn, AIOC_IRQ_PRIO_AUDIO);

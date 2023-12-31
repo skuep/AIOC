@@ -16,6 +16,8 @@
 
 static inline void PTT_Control(uint8_t pttMask)
 {
+    /* TODO: This way, both PTTs can only be asserted/deasserted simultaneously.
+     * Maybe better for future applications to have PTT1 and PTT2 controlled separately. */
     __disable_irq();
 
     if (pttMask & PTT_MASK_PTT1) {

@@ -51,8 +51,8 @@ tusb_desc_device_t desc_device = {
 // Application return pointer to descriptor
 uint8_t const* tud_descriptor_device_cb(void) {
     /* Get up-to-date USB settings */
-    desc_device.idVendor  = (settingsRegMap[SETTINGS_REG_USBID] >> SETTINGS_REG_USBID_VID_OFFS) & SETTINGS_REG_USBID_VID_MASK;
-    desc_device.idProduct = (settingsRegMap[SETTINGS_REG_USBID] >> SETTINGS_REG_USBID_PID_OFFS) & SETTINGS_REG_USBID_PID_MASK;
+    desc_device.idVendor  = (settingsRegMap[SETTINGS_REG_USBID] & SETTINGS_REG_USBID_VID_MASK) >> SETTINGS_REG_USBID_VID_OFFS;
+    desc_device.idProduct = (settingsRegMap[SETTINGS_REG_USBID] & SETTINGS_REG_USBID_PID_MASK) >> SETTINGS_REG_USBID_PID_OFFS;
 
     return (uint8_t const*) &desc_device;
 }
