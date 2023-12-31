@@ -5,7 +5,6 @@
 #include "usb_descriptors.h"
 
 #define SETTINGS_REGMAP_SIZE     256
-#define SETTINGS_FLASH_ADDRESS   0x0801F000UL
 
 extern uint32_t settingsRegMap[SETTINGS_REGMAP_SIZE];
 

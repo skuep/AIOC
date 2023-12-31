@@ -2,6 +2,10 @@
 #include <assert.h>
 #include "stm32f3xx_hal.h"
 
+/* Define this, so that each time the AIOC is programmed, the EEPROM is cleared.
+ * This is inconvenient, but settings might not be portable across versions. */
+uint32_t settingsRegMapROM[SETTINGS_REGMAP_SIZE] __attribute__ ((section (".eeprom"))) = {[0 ... (SETTINGS_REGMAP_SIZE-1)] = 0xFF};
+
 uint32_t settingsRegMap[SETTINGS_REGMAP_SIZE] = {[0 ... (SETTINGS_REGMAP_SIZE-1)] = 0};
 
 void Settings_Init()
@@ -79,7 +83,10 @@ void Settings_Store(void)
 
 void Settings_Recall(void)
 {
-    uint32_t wordAddress = SETTINGS_FLASH_ADDRESS;
+    /* From linker script */
+    extern uint32_t * _eeprom;
+
+    uint32_t wordAddress = (uint32_t) &_eeprom;
     uint32_t wordCount = SETTINGS_REGMAP_SIZE;
     uint32_t * wordPtr = settingsRegMap;
 
