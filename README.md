@@ -76,6 +76,7 @@ This is the process I use for building. See photographs in ``images`` folder.
 - Insert the AIOC PCB into the solder guide
 - Solder sleeve tab on the back side for both TRS connectors first
 - Turn around PCB and solder remaining solder lugs
+- Optionally you can 3D print a case for your AIOC. [This model](https://www.thingiverse.com/thing:6144997) has been designed by a third party but is confirmed to work with the AIOC.
 
 ## How To Build
 For building the firmware, clone the repository and initialize the submodules. Create an empty workspace with the STM32CubeIDE and import the project.
@@ -84,7 +85,6 @@ For building the firmware, clone the repository and initialize the submodules. C
   - Start STM32CubeIDE and create a new workspace under ``<project-root>/stm32``
   - Choose File->Import and import the ``aioc-fw`` project in the same folder without copying
   - Select Project->Build All and the project should build. Use the Release build unless you specifically want to debug an issue
-  - A 3D printed case is available and can be found [here](https://www.thingiverse.com/thing:6144997).
 
 ## How To Program
 ### Initial programming
