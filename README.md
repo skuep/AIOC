@@ -4,7 +4,7 @@
 [![](https://img.shields.io/github/license/skuep/AIOC)](https://github.com/skuep/AIOC/blob/master/LICENSE.md)
 
 # AIOC
-This is the Ham Radio *All-in-one-Cable*. **It is currently still being tested!**. Please read this README carefully before ordering anything.
+This is the Ham Radio *All-in-one-Cable*. **It is currently still being tested!** Please read this README carefully before ordering anything.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
