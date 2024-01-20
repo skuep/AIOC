@@ -68,6 +68,8 @@ H1,H2 designators don't exist in the BOM file.
 J2,D3,D4,R17 designators don't exist in the CPL file.
 ````
 
+Note for people doing their own PCB production: I suggest using the LCSC part numbers in the BOM file as a guide on what to buy (especially regarding the MCU).
+
 ## How To Assemble
 This is the process I use for building. See photographs in ``images`` folder.
 - You need to use **Monacor** ``PG-204P`` and ``PG-203P`` or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection). **Adafruit** products ``1800`` and ``1798`` are confirmed to work as well.
