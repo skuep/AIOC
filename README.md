@@ -4,7 +4,7 @@
 [![](https://img.shields.io/github/license/skuep/AIOC)](https://github.com/skuep/AIOC/blob/master/LICENSE.md)
 
 # AIOC
-This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!** Please read this README carefully before ordering anything.
+This is the Ham Radio *All-in-one-Cable*. **It is currently still being tested!**. Please read this README carefully before ordering anything.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
@@ -20,7 +20,7 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 - Cheap & Hackable Digital mode USB interface (similar to digirig, mobilinkd, etc...)
 - Programming Cable Function via virtual Serial Port
 - Compact form-factor (DIY overmolded enclosure is currently TBD)
-- Based on easy-to-hack STM32F302 with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
+- Based on easy-to-hack **STM32F302** with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
 - Can support Dual-PTT HTs
 
 ## Compatibility
@@ -34,11 +34,6 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
   - Wouxun UV-9D Mate (CHIRP + APRS)
   - Baofeng UV-5R (CHIRP + APRS)
   - BTECH 6X2 (CHIRP) 
-
-## Future Work ##
-- Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
-- Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
-- "High-Performance" VOX emulation with advanced features (e.g. pre-triggered VOX to activate PTT a few milliseconds before data, reduced tail time)
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
@@ -173,3 +168,8 @@ Upload:
   - Select Radio->Upload to Radio
   - That's it
 
+# Future work
+I encourage you to check for Pre-Releases announcing upcoming features. Currently we are working on
+- **Configurable AIOC**: Change the way the PTT is asserted or the USB VID:PID that the AIOC uses using a Python script. These settings can be stored on the AIOC.
+- **Virtual-PTT**: This feature allows your AIOC to be configured to automatically assert the PTT line when it receives TX data from your PC.
+- **Virtual-COS**: The AIOC will notify your PC (e.g. using CM108 emulation) that there is audio data on the microphone input.
