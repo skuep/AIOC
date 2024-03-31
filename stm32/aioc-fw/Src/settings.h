@@ -211,131 +211,131 @@ extern uint32_t settingsRegMap[SETTINGS_REGMAP_SIZE];
 #define SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_MASK              0x0000FFFFUL
 
 /* AIOC debug register 0 */
-#define SETTINGS_REG_DBGAIOC0                               0xC0
-#define SETTINGS_REG_DBGAIOC0_DEFAULT                       0
+#define SETTINGS_REG_INFO_AIOC0                             0xC0
+#define SETTINGS_REG_INFO_AIOC0_DEFAULT                     0
 /* Various digital signal states */
-#define SETTINGS_REG_DBGAIOC0_PTT1STATE_MASK                0x00010000UL
-#define SETTINGS_REG_DBGAIOC0_PTT2STATE_MASK                0x00020000UL
+#define SETTINGS_REG_INFO_AIOC0_PTT1STATE_MASK              0x00010000UL
+#define SETTINGS_REG_INFO_AIOC0_PTT2STATE_MASK              0x00020000UL
 
 /* UAC audio debug register 0 */
-#define SETTINGS_REG_DBGAUDIO0                              0xD0
-#define SETTINGS_REG_DBGAUDIO0_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO0                            0xD0
+#define SETTINGS_REG_INFO_AUDIO0_DEFAULT                    0
 /* Playback or recording muted (master and first channel) */
-#define SETTINGS_REG_DBGAUDIO0_RECMUTE0_MASK                0x00010000UL
-#define SETTINGS_REG_DBGAUDIO0_RECMUTE1_MASK                0x00020000UL
-#define SETTINGS_REG_DBGAUDIO0_PLAYMUTE0_MASK               0x00100000UL
-#define SETTINGS_REG_DBGAUDIO0_PLAYMUTE1_MASK               0x00200000UL
+#define SETTINGS_REG_INFO_AUDIO0_RECMUTE0_MASK              0x00010000UL
+#define SETTINGS_REG_INFO_AUDIO0_RECMUTE1_MASK              0x00020000UL
+#define SETTINGS_REG_INFO_AUDIO0_PLAYMUTE0_MASK             0x00100000UL
+#define SETTINGS_REG_INFO_AUDIO0_PLAYMUTE1_MASK             0x00200000UL
 /* Virtual PTT and COS states */
-#define SETTINGS_REG_DBGAIOC0_VPTTSTATE_MASK                0x01000000UL
-#define SETTINGS_REG_DBGAIOC0_VCOSSTATE_MASK                0x10000000UL
+#define SETTINGS_REG_INFO_AIOC0_VPTTSTATE_MASK              0x01000000UL
+#define SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK              0x10000000UL
 
 /* Playback and recording state */
-#define SETTINGS_REG_DBGAUDIO0_RECSTATE_OFFS                24
-#define SETTINGS_REG_DBGAUDIO0_RECSTATE_MASK                0x0F000000UL
-#define SETTINGS_REG_DBGAUDIO0_RECSTATE_OFF_ENUM            0
-#define SETTINGS_REG_DBGAUDIO0_RECSTATE_START_ENUM          1
-#define SETTINGS_REG_DBGAUDIO0_RECSTATE_RUN_ENUM            2
-#define SETTINGS_REG_DBGAUDIO0_PLAYSTATE_OFFS               28
-#define SETTINGS_REG_DBGAUDIO0_PLAYSTATE_MASK               0xF0000000UL
-#define SETTINGS_REG_DBGAUDIO0_PLAYSTATE_OFF_ENUM           0
-#define SETTINGS_REG_DBGAUDIO0_PLAYSTATE_START_ENUM         1
-#define SETTINGS_REG_DBGAUDIO0_PLAYSTATE_RUN_ENUM           2
+#define SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFFS              24
+#define SETTINGS_REG_INFO_AUDIO0_RECSTATE_MASK              0x0F000000UL
+#define SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFF_ENUM          0
+#define SETTINGS_REG_INFO_AUDIO0_RECSTATE_START_ENUM        1
+#define SETTINGS_REG_INFO_AUDIO0_RECSTATE_RUN_ENUM          2
+#define SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFFS             28
+#define SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_MASK             0xF0000000UL
+#define SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFF_ENUM         0
+#define SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_START_ENUM       1
+#define SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_RUN_ENUM         2
 
 /* Audio debug register 1 */
-#define SETTINGS_REG_DBGAUDIO1                              0xD1
-#define SETTINGS_REG_DBGAUDIO1_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO1                            0xD1
+#define SETTINGS_REG_INFO_AUDIO1_DEFAULT                    0
 
 /* Audio debug register 2 */
-#define SETTINGS_REG_DBGAUDIO2                              0xD2
-#define SETTINGS_REG_DBGAUDIO2_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO2                            0xD2
+#define SETTINGS_REG_INFO_AUDIO2_DEFAULT                    0
 /* Recording samplerate */
-#define SETTINGS_REG_DBGAUDIO2_RECRATE_OFFS                 0
-#define SETTINGS_REG_DBGAUDIO2_RECRATE_MASK                 0xFFFFFFFFUL
+#define SETTINGS_REG_INFO_AUDIO2_RECRATE_OFFS               0
+#define SETTINGS_REG_INFO_AUDIO2_RECRATE_MASK               0xFFFFFFFFUL
 
 /* Audio debug register 3 */
-#define SETTINGS_REG_DBGAUDIO3                              0xD3
-#define SETTINGS_REG_DBGAUDIO3_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO3                            0xD3
+#define SETTINGS_REG_INFO_AUDIO3_DEFAULT                    0
 /* Recording volume (master and first channel) */
-#define SETTINGS_REG_DBGAUDIO3_RECVOL0_OFFS                 0
-#define SETTINGS_REG_DBGAUDIO3_RECVOL0_MASK                 0x0000FFFFUL
-#define SETTINGS_REG_DBGAUDIO3_RECVOL1_OFFS                 16
-#define SETTINGS_REG_DBGAUDIO3_RECVOL1_MASK                 0xFFFF0000UL
+#define SETTINGS_REG_INFO_AUDIO3_RECVOL0_OFFS               0
+#define SETTINGS_REG_INFO_AUDIO3_RECVOL0_MASK               0x0000FFFFUL
+#define SETTINGS_REG_INFO_AUDIO3_RECVOL1_OFFS               16
+#define SETTINGS_REG_INFO_AUDIO3_RECVOL1_MASK               0xFFFF0000UL
 
 /* TODO: D4, D5, D6 -> Recording buffer levels (avg/min/max) */
 
 /* Audio debug register 4 */
-#define SETTINGS_REG_DBGAUDIO4                              0xD4
-#define SETTINGS_REG_DBGAUDIO4_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO4                            0xD4
+#define SETTINGS_REG_INFO_AUDIO4_DEFAULT                    0
 
 /* Audio debug register 5 */
-#define SETTINGS_REG_DBGAUDIO5                              0xD5
-#define SETTINGS_REG_DBGAUDIO5_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO5                            0xD5
+#define SETTINGS_REG_INFO_AUDIO5_DEFAULT                    0
 
 /* Audio debug register 6 */
-#define SETTINGS_REG_DBGAUDIO6                              0xD6
-#define SETTINGS_REG_DBGAUDIO6_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO6                            0xD6
+#define SETTINGS_REG_INFO_AUDIO6_DEFAULT                    0
 
 /* Audio debug register 7 */
-#define SETTINGS_REG_DBGAUDIO7                              0xD7
-#define SETTINGS_REG_DBGAUDIO7_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO7                            0xD7
+#define SETTINGS_REG_INFO_AUDIO7_DEFAULT                    0
 
 /* Audio debug register 8 */
-#define SETTINGS_REG_DBGAUDIO8                              0xD8
-#define SETTINGS_REG_DBGAUDIO8_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO8                            0xD8
+#define SETTINGS_REG_INFO_AUDIO8_DEFAULT                    0
 /* Playback samplerate */
-#define SETTINGS_REG_DBGAUDIO8_PLAYRATE_OFFS                0
-#define SETTINGS_REG_DBGAUDIO8_PLAYRATE_MASK                0xFFFFFFFFUL
+#define SETTINGS_REG_INFO_AUDIO8_PLAYRATE_OFFS              0
+#define SETTINGS_REG_INFO_AUDIO8_PLAYRATE_MASK              0xFFFFFFFFUL
 
 /* Audio debug register 9 */
-#define SETTINGS_REG_DBGAUDIO9                              0xD9
-#define SETTINGS_REG_DBGAUDIO9_DEFAULT                      0
+#define SETTINGS_REG_INFO_AUDIO9                            0xD9
+#define SETTINGS_REG_INFO_AUDIO9_DEFAULT                    0
 /* Playback volume (master and first channel) */
-#define SETTINGS_REG_DBGAUDIO9_PLAYVOL0_OFFS                 0
-#define SETTINGS_REG_DBGAUDIO9_PLAYVOL0_MASK                 0x0000FFFFUL
-#define SETTINGS_REG_DBGAUDIO9_PLAYVOL1_OFFS                 16
-#define SETTINGS_REG_DBGAUDIO9_PLAYVOL1_MASK                 0xFFFF0000UL
+#define SETTINGS_REG_INFO_AUDIO9_PLAYVOL0_OFFS              0
+#define SETTINGS_REG_INFO_AUDIO9_PLAYVOL0_MASK              0x0000FFFFUL
+#define SETTINGS_REG_INFO_AUDIO9_PLAYVOL1_OFFS              16
+#define SETTINGS_REG_INFO_AUDIO9_PLAYVOL1_MASK              0xFFFF0000UL
 
 /* Audio debug register 10 */
-#define SETTINGS_REG_DBGAUDIO10                             0xDA
-#define SETTINGS_REG_DBGAUDIO10_DEFAULT                     0
+#define SETTINGS_REG_INFO_AUDIO10                           0xDA
+#define SETTINGS_REG_INFO_AUDIO10_DEFAULT                   0
 /* Average playback buffer level */
-#define SETTINGS_REG_DBGAUDIO10_PLAYBUFAVG_OFFS             0
-#define SETTINGS_REG_DBGAUDIO10_PLAYBUFAVG_MASK             0x0000FFFFUL
+#define SETTINGS_REG_INFO_AUDIO10_PLAYBUFAVG_OFFS           0
+#define SETTINGS_REG_INFO_AUDIO10_PLAYBUFAVG_MASK           0x0000FFFFUL
 
 /* Audio debug register 11 */
-#define SETTINGS_REG_DBGAUDIO11                             0xDB
-#define SETTINGS_REG_DBGAUDIO11_DEFAULT                     0
+#define SETTINGS_REG_INFO_AUDIO11                           0xDB
+#define SETTINGS_REG_INFO_AUDIO11_DEFAULT                   0
 /* Minimum playback buffer level */
-#define SETTINGS_REG_DBGAUDIO11_PLAYBUFMIN_OFFS             0
-#define SETTINGS_REG_DBGAUDIO11_PLAYBUFMIN_MASK             0x0000FFFFUL
+#define SETTINGS_REG_INFO_AUDIO11_PLAYBUFMIN_OFFS           0
+#define SETTINGS_REG_INFO_AUDIO11_PLAYBUFMIN_MASK           0x0000FFFFUL
 
 /* Audio debug register 12 */
-#define SETTINGS_REG_DBGAUDIO12                             0xDC
-#define SETTINGS_REG_DBGAUDIO12_DEFAULT                     0
+#define SETTINGS_REG_INFO_AUDIO12                           0xDC
+#define SETTINGS_REG_INFO_AUDIO12_DEFAULT                   0
 /* Maximum playback buffer level */
-#define SETTINGS_REG_DBGAUDIO12_PLAYBUFMAX_OFFS             0
-#define SETTINGS_REG_DBGAUDIO12_PLAYBUFMAX_MASK             0x0000FFFFUL
+#define SETTINGS_REG_INFO_AUDIO12_PLAYBUFMAX_OFFS           0
+#define SETTINGS_REG_INFO_AUDIO12_PLAYBUFMAX_MASK           0x0000FFFFUL
 
 /* Audio debug register 13 */
-#define SETTINGS_REG_DBGAUDIO13                             0xDD
-#define SETTINGS_REG_DBGAUDIO13_DEFAULT                     0
+#define SETTINGS_REG_INFO_AUDIO13                           0xDD
+#define SETTINGS_REG_INFO_AUDIO13_DEFAULT                   0
 /* Average UAC2.0 Feedback Value since last playback */
-#define SETTINGS_REG_DBGAUDIO13_PLAYFBAVG_OFFS              0
-#define SETTINGS_REG_DBGAUDIO13_PLAYFBAVG_MASK              0xFFFFFFFFUL
+#define SETTINGS_REG_INFO_AUDIO13_PLAYFBAVG_OFFS            0
+#define SETTINGS_REG_INFO_AUDIO13_PLAYFBAVG_MASK            0xFFFFFFFFUL
 
 /* Audio debug register 14 */
-#define SETTINGS_REG_DBGAUDIO14                             0xDE
-#define SETTINGS_REG_DBGAUDIO14_DEFAULT                     0
+#define SETTINGS_REG_INFO_AUDIO14                           0xDE
+#define SETTINGS_REG_INFO_AUDIO14_DEFAULT                   0
 /* Minimum UAC2.0 Feedback Value since last playback */
-#define SETTINGS_REG_DBGAUDIO14_PLAYFBMIN_OFFS              0
-#define SETTINGS_REG_DBGAUDIO14_PLAYFBMIN_MASK              0xFFFFFFFFUL
+#define SETTINGS_REG_INFO_AUDIO14_PLAYFBMIN_OFFS            0
+#define SETTINGS_REG_INFO_AUDIO14_PLAYFBMIN_MASK            0xFFFFFFFFUL
 
 /* Audio debug register 15 */
-#define SETTINGS_REG_DBGAUDIO15                             0xDF
-#define SETTINGS_REG_DBGAUDIO15_DEFAULT                     0
+#define SETTINGS_REG_INFO_AUDIO15                           0xDF
+#define SETTINGS_REG_INFO_AUDIO15_DEFAULT                   0
 /* Maximum UAC2.0 Feedback Value since last playback */
-#define SETTINGS_REG_DBGAUDIO15_PLAYFBMAX_OFFS              0
-#define SETTINGS_REG_DBGAUDIO15_PLAYFBMAX_MASK              0xFFFFFFFFUL
+#define SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_OFFS            0
+#define SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_MASK            0xFFFFFFFFUL
 
 
 

@@ -109,9 +109,9 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         microphoneMute[channelNum] = ((audio_control_cur_1_t*) pBuff)->bCur;
 
         /* Update debug register */
-        settingsRegMap[SETTINGS_REG_DBGAUDIO0] =  (settingsRegMap[SETTINGS_REG_DBGAUDIO0] & ~(SETTINGS_REG_DBGAUDIO0_RECMUTE0_MASK | SETTINGS_REG_DBGAUDIO0_RECMUTE1_MASK)) \
-                                                | (microphoneMute[0] ? SETTINGS_REG_DBGAUDIO0_RECMUTE0_MASK : 0) \
-                                                | (microphoneMute[1] ? SETTINGS_REG_DBGAUDIO0_RECMUTE1_MASK : 0);
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] =  (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~(SETTINGS_REG_INFO_AUDIO0_RECMUTE0_MASK | SETTINGS_REG_INFO_AUDIO0_RECMUTE1_MASK)) \
+                                                | (microphoneMute[0] ? SETTINGS_REG_INFO_AUDIO0_RECMUTE0_MASK : 0) \
+                                                | (microphoneMute[1] ? SETTINGS_REG_INFO_AUDIO0_RECMUTE1_MASK : 0);
 
         TU_LOG2("    Set Mute: %d of channel: %u\r\n", microphoneMute[channelNum], channelNum);
       return true;
@@ -125,8 +125,8 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         microphoneLinVolume[channelNum] = (microphoneLogVolume[channelNum] != 0x8000) ?
                 (uint16_t) (65535 * pow(10, logVolume/20) + 0.5) : 0; /* log to linear with rounding */
 
-        settingsRegMap[SETTINGS_REG_DBGAUDIO3] = ((((uint32_t) microphoneLinVolume[0]) << SETTINGS_REG_DBGAUDIO3_RECVOL0_OFFS) & SETTINGS_REG_DBGAUDIO3_RECVOL0_MASK) \
-                                               | ((((uint32_t) microphoneLinVolume[1]) << SETTINGS_REG_DBGAUDIO3_RECVOL1_OFFS) & SETTINGS_REG_DBGAUDIO3_RECVOL1_MASK);
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO3] = ((((uint32_t) microphoneLinVolume[0]) << SETTINGS_REG_INFO_AUDIO3_RECVOL0_OFFS) & SETTINGS_REG_INFO_AUDIO3_RECVOL0_MASK) \
+                                               | ((((uint32_t) microphoneLinVolume[1]) << SETTINGS_REG_INFO_AUDIO3_RECVOL1_OFFS) & SETTINGS_REG_INFO_AUDIO3_RECVOL1_MASK);
 
         TU_LOG2("    Set Volume: %u.%u dB of channel: %u\r\n", microphoneLogVolume[channelNum] / 256, microphoneLogVolume[channelNum] % 256, channelNum);
       return true;
@@ -149,9 +149,9 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         speakerMute[channelNum] = ((audio_control_cur_1_t*) pBuff)->bCur;
 
         /* Update debug register */
-        settingsRegMap[SETTINGS_REG_DBGAUDIO0] =  (settingsRegMap[SETTINGS_REG_DBGAUDIO0] & ~(SETTINGS_REG_DBGAUDIO0_PLAYMUTE0_MASK | SETTINGS_REG_DBGAUDIO0_PLAYMUTE1_MASK)) \
-                                                | (speakerMute[0] ? SETTINGS_REG_DBGAUDIO0_PLAYMUTE0_MASK : 0) \
-                                                | (speakerMute[1] ? SETTINGS_REG_DBGAUDIO0_PLAYMUTE1_MASK : 0);
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] =  (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~(SETTINGS_REG_INFO_AUDIO0_PLAYMUTE0_MASK | SETTINGS_REG_INFO_AUDIO0_PLAYMUTE1_MASK)) \
+                                                | (speakerMute[0] ? SETTINGS_REG_INFO_AUDIO0_PLAYMUTE0_MASK : 0) \
+                                                | (speakerMute[1] ? SETTINGS_REG_INFO_AUDIO0_PLAYMUTE1_MASK : 0);
 
         TU_LOG2("    Set Mute: %d of channel: %u\r\n", speakerMute[channelNum], channelNum);
 
@@ -167,8 +167,8 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
                 (uint16_t) (65535 * pow(10, logVolume/20) + 0.5) : 0; /* log to linear with rounding */
 
         /* Update debug register */
-        settingsRegMap[SETTINGS_REG_DBGAUDIO9] = ((((uint32_t) speakerLinVolume[0]) << SETTINGS_REG_DBGAUDIO9_PLAYVOL0_OFFS) & SETTINGS_REG_DBGAUDIO9_PLAYVOL0_MASK) \
-                                               | ((((uint32_t) speakerLinVolume[1]) << SETTINGS_REG_DBGAUDIO9_PLAYVOL1_OFFS) & SETTINGS_REG_DBGAUDIO9_PLAYVOL1_MASK);
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO9] = ((((uint32_t) speakerLinVolume[0]) << SETTINGS_REG_INFO_AUDIO9_PLAYVOL0_OFFS) & SETTINGS_REG_INFO_AUDIO9_PLAYVOL0_MASK) \
+                                               | ((((uint32_t) speakerLinVolume[1]) << SETTINGS_REG_INFO_AUDIO9_PLAYVOL1_OFFS) & SETTINGS_REG_INFO_AUDIO9_PLAYVOL1_MASK);
 
 
         TU_LOG2("    Set Volume: %u.%u dB of channel: %u\r\n", microphoneLogVolume[channelNum] / 256, microphoneLogVolume[channelNum] % 256, channelNum);
@@ -197,7 +197,7 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
             Timer_ADC_Init();
 
             /* Update debug register */
-            settingsRegMap[SETTINGS_REG_DBGAUDIO2] = (((uint32_t) microphoneSampleFreqCfg) << SETTINGS_REG_DBGAUDIO2_RECRATE_OFFS) & SETTINGS_REG_DBGAUDIO2_RECRATE_MASK;
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO2] = (((uint32_t) microphoneSampleFreqCfg) << SETTINGS_REG_INFO_AUDIO2_RECRATE_OFFS) & SETTINGS_REG_INFO_AUDIO2_RECRATE_MASK;
 
             return true;
 
@@ -231,7 +231,7 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
             Timer_DAC_Init();
 
             /* Update debug register */
-            settingsRegMap[SETTINGS_REG_DBGAUDIO8] = (((uint32_t) speakerSampleFreqCfg) << SETTINGS_REG_DBGAUDIO8_PLAYRATE_OFFS) & SETTINGS_REG_DBGAUDIO8_PLAYRATE_MASK;
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO8] = (((uint32_t) speakerSampleFreqCfg) << SETTINGS_REG_INFO_AUDIO8_PLAYRATE_OFFS) & SETTINGS_REG_INFO_AUDIO8_PLAYRATE_MASK;
 
             return true;
 
@@ -520,8 +520,8 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
         microphoneState = STATE_RUN;
 
         /* Update debug register */
-        settingsRegMap[SETTINGS_REG_DBGAUDIO0] = (settingsRegMap[SETTINGS_REG_DBGAUDIO0] & ~SETTINGS_REG_DBGAUDIO0_RECSTATE_MASK)
-                                               | (((uint32_t) SETTINGS_REG_DBGAUDIO0_RECSTATE_RUN_ENUM) << SETTINGS_REG_DBGAUDIO0_RECSTATE_OFFS);
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_RECSTATE_MASK)
+                                               | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_RECSTATE_RUN_ENUM) << SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFFS);
     }
 
     return true;
@@ -544,8 +544,8 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
             NVIC_EnableIRQ(TIM6_DAC1_IRQn);
 
             /* Update debug register */
-            settingsRegMap[SETTINGS_REG_DBGAUDIO0] = (settingsRegMap[SETTINGS_REG_DBGAUDIO0] & ~SETTINGS_REG_DBGAUDIO0_PLAYSTATE_MASK)
-                                                   | (((uint32_t) SETTINGS_REG_DBGAUDIO0_PLAYSTATE_RUN_ENUM) << SETTINGS_REG_DBGAUDIO0_PLAYSTATE_OFFS);
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_MASK)
+                                                   | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_RUN_ENUM) << SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFFS);
         }
 
         /* Initialize/override min/max/avg during startup buffering */
@@ -555,9 +555,9 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
     }
 
     /* Write to debug registers */
-    settingsRegMap[SETTINGS_REG_DBGAUDIO10] = ((uint32_t) (speakerBufferLvlAvg >> 16) << SETTINGS_REG_DBGAUDIO10_PLAYBUFAVG_OFFS) & SETTINGS_REG_DBGAUDIO10_PLAYBUFAVG_MASK;
-    settingsRegMap[SETTINGS_REG_DBGAUDIO11] = ((uint32_t) speakerBufferLvlMin         << SETTINGS_REG_DBGAUDIO11_PLAYBUFMIN_OFFS) & SETTINGS_REG_DBGAUDIO11_PLAYBUFMIN_MASK;
-    settingsRegMap[SETTINGS_REG_DBGAUDIO12] = ((uint32_t) speakerBufferLvlMax         << SETTINGS_REG_DBGAUDIO12_PLAYBUFMAX_OFFS) & SETTINGS_REG_DBGAUDIO12_PLAYBUFMAX_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO10] = ((uint32_t) (speakerBufferLvlAvg >> 16) << SETTINGS_REG_INFO_AUDIO10_PLAYBUFAVG_OFFS) & SETTINGS_REG_INFO_AUDIO10_PLAYBUFAVG_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO11] = ((uint32_t) speakerBufferLvlMin         << SETTINGS_REG_INFO_AUDIO11_PLAYBUFMIN_OFFS) & SETTINGS_REG_INFO_AUDIO11_PLAYBUFMIN_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO12] = ((uint32_t) speakerBufferLvlMax         << SETTINGS_REG_INFO_AUDIO12_PLAYBUFMAX_OFFS) & SETTINGS_REG_INFO_AUDIO12_PLAYBUFMAX_MASK;
 
     return true;
 }
@@ -581,8 +581,8 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
             Timeout_Timers_Init();
 
             /* Update debug register */
-            settingsRegMap[SETTINGS_REG_DBGAUDIO0] = (settingsRegMap[SETTINGS_REG_DBGAUDIO0] & ~SETTINGS_REG_DBGAUDIO0_RECSTATE_MASK)
-                                                   | (((uint32_t) SETTINGS_REG_DBGAUDIO0_RECSTATE_START_ENUM) << SETTINGS_REG_DBGAUDIO0_RECSTATE_OFFS);
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_RECSTATE_MASK)
+                                                   | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_RECSTATE_START_ENUM) << SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFFS);
         }
         break;
 
@@ -595,8 +595,8 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
             Timeout_Timers_Init();
 
             /* Update debug register */
-            settingsRegMap[SETTINGS_REG_DBGAUDIO0] = (settingsRegMap[SETTINGS_REG_DBGAUDIO0] & ~SETTINGS_REG_DBGAUDIO0_PLAYSTATE_MASK)
-                                                   | (((uint32_t) SETTINGS_REG_DBGAUDIO0_PLAYSTATE_START_ENUM) << SETTINGS_REG_DBGAUDIO0_PLAYSTATE_OFFS);
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_MASK)
+                                                   | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_START_ENUM) << SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFFS);
         }
         break;
 
@@ -621,8 +621,8 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
         microphoneState = STATE_OFF;
 
         /* Update debug register */
-        settingsRegMap[SETTINGS_REG_DBGAUDIO0] = (settingsRegMap[SETTINGS_REG_DBGAUDIO0] & ~SETTINGS_REG_DBGAUDIO0_RECSTATE_MASK)
-                                               | (((uint32_t) SETTINGS_REG_DBGAUDIO0_RECSTATE_OFF_ENUM) << SETTINGS_REG_DBGAUDIO0_RECSTATE_OFFS);
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_RECSTATE_MASK)
+                                               | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFF_ENUM) << SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFFS);
         break;
 
     case ITF_NUM_AUDIO_STREAMING_OUT:
@@ -631,8 +631,8 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
         speakerState = STATE_OFF;
 
         /* Update debug register */
-        settingsRegMap[SETTINGS_REG_DBGAUDIO0] = (settingsRegMap[SETTINGS_REG_DBGAUDIO0] & ~SETTINGS_REG_DBGAUDIO0_PLAYSTATE_MASK)
-                                               | (((uint32_t) SETTINGS_REG_DBGAUDIO0_PLAYSTATE_OFF_ENUM) << SETTINGS_REG_DBGAUDIO0_PLAYSTATE_OFFS);
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_MASK)
+                                               | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFF_ENUM) << SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFFS);
         break;
 
     default:
@@ -700,9 +700,9 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     }
 
     /* Write to debug registers */
-    settingsRegMap[SETTINGS_REG_DBGAUDIO13] = ((uint32_t) (speakerFeedbackAvg >> 16) << SETTINGS_REG_DBGAUDIO13_PLAYFBAVG_OFFS) & SETTINGS_REG_DBGAUDIO13_PLAYFBAVG_MASK;
-    settingsRegMap[SETTINGS_REG_DBGAUDIO14] = ((uint32_t) speakerFeedbackMin         << SETTINGS_REG_DBGAUDIO14_PLAYFBMIN_OFFS) & SETTINGS_REG_DBGAUDIO14_PLAYFBMIN_MASK;
-    settingsRegMap[SETTINGS_REG_DBGAUDIO15] = ((uint32_t) speakerFeedbackMax         << SETTINGS_REG_DBGAUDIO15_PLAYFBMAX_OFFS) & SETTINGS_REG_DBGAUDIO15_PLAYFBMAX_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO13] = ((uint32_t) (speakerFeedbackAvg >> 16) << SETTINGS_REG_INFO_AUDIO13_PLAYFBAVG_OFFS) & SETTINGS_REG_INFO_AUDIO13_PLAYFBAVG_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO14] = ((uint32_t) speakerFeedbackMin         << SETTINGS_REG_INFO_AUDIO14_PLAYFBMIN_OFFS) & SETTINGS_REG_INFO_AUDIO14_PLAYFBMIN_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO15] = ((uint32_t) speakerFeedbackMax         << SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_OFFS) & SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_MASK;
 }
 
 void ADC1_2_IRQHandler (void)
@@ -772,7 +772,7 @@ void TIM16_IRQHandler(void)
             TIM16->CR1 = cr | TIM_CR1_CEN;
 
             /* Update debug register */
-            settingsRegMap[SETTINGS_REG_DBGAUDIO0] |= SETTINGS_REG_DBGAIOC0_VPTTSTATE_MASK;
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] |= SETTINGS_REG_INFO_AIOC0_VPTTSTATE_MASK;
 
             /* Assert enabled PTTs */
             uint8_t pttMask = PTT_MASK_NONE;
@@ -786,7 +786,7 @@ void TIM16_IRQHandler(void)
         TIM16->CR1 &= ~TIM_CR1_CEN;
 
         /* Update debug register */
-        settingsRegMap[SETTINGS_REG_DBGAUDIO0] &= ~SETTINGS_REG_DBGAIOC0_VPTTSTATE_MASK;
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] &= ~SETTINGS_REG_INFO_AIOC0_VPTTSTATE_MASK;
 
         /* Deassert enabled PTTs */
         uint8_t pttMask = PTT_MASK_NONE;
@@ -812,7 +812,7 @@ void TIM17_IRQHandler(void)
             TIM17->CR1 = cr | TIM_CR1_CEN;
 
             /* Update debug register */
-            settingsRegMap[SETTINGS_REG_DBGAUDIO0] |= SETTINGS_REG_DBGAIOC0_VCOSSTATE_MASK;
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] |= SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK;
 
             /* Set COS state */
             COS_SetState(0x01);
@@ -822,7 +822,7 @@ void TIM17_IRQHandler(void)
         TIM17->CR1 &= ~TIM_CR1_CEN;
 
         /* Update debug register */
-        settingsRegMap[SETTINGS_REG_DBGAUDIO0] &= ~SETTINGS_REG_DBGAIOC0_VCOSSTATE_MASK;
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] &= ~SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK;
 
         /* Set COS state */
         COS_SetState(0x00);
