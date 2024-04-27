@@ -8,6 +8,8 @@ This is the Ham Radio *All-in-one-Cable*. **It is currently still being tested!*
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
+This fork replaces USB-C connector used in original design with another one with better availability and more common footprint.
+
 ## What does it do?
 The AIOC is a small adapter with a USB-C connector that enumerates itself as a sound-card (e.g. for APRS purposes), a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Talk) as well as a CM108 compatible HID endpoint for CM108-style PTT (new in firmware version 1.2.0).
 
@@ -39,7 +41,7 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
 ## How To Fab
-- Go to JLCPCB.com and upload the GERBER-k1-aioc.zip package (under ``kicad/k1-aioc/jlcpcb``)
+- Go to JLCPCB.com and upload the k1-aioc.zip package (under ``kicad/k1-aioc/production``)
   - Select PCB Thickness 1.2mm (that is what I recommend with the TRS connectors I used)
   - You may want to select LeadFree HASL
   - Select Silkscreen/Soldermask color to your liking
@@ -48,8 +50,8 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
   - Assembly Side "Top Side"
   - Tooling Holes "Added by Customer"
   - Press Confirm
-  - Click "Add BOM File" and upload ``BOM-k1-aioc.csv``
-  - Click "Add CPL File" and upload ``CPL-k1-aioc.csv``
+  - Click "Add BOM File" and upload ``bom.csv``
+  - Click "Add CPL File" and upload ``positions.csv``
   - Press Next
   - Look Through components, see if something is missing or problematic and press Next
   - Check everything looks roughly good (rotations are already baked-in and should be correct). Save to Cart
