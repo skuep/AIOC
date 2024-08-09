@@ -134,13 +134,13 @@ __Note__ before firmware version 1.2.0, PTT was asserted by ``DTR=1`` (ignoring 
 The soundcard interface of the AIOC gives access to the audio data channels. It has one mono microphone channel and one mono speaker channel and currently supports the following baudrates:
   - 96000 Hz
   - 48000 Hz (preferred)
-  - 44100 Hz
+  - 44100 Hz (has approx. 227 ppm of frequency error for DAC)
   - 32000 Hz
   - 24000 Hz
-  - 22050 Hz (specifically for APRSdroid)
+  - 22050 Hz (specifically for APRSdroid, has approx. 90 ppm of frequency error for DAC)
   - 16000 Hz
   - 12000 Hz
-  - 11025 Hz
+  - 11025 Hz (has approx. 90 ppm of frequency error for DAC)
   - 8000 Hz
 
 Since firmware version 1.2.0, a CM108 style PTT interface is available for public testing. This interface works in parallel to the COM-port PTT.
