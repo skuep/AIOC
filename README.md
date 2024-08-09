@@ -135,10 +135,10 @@ The soundcard interface of the AIOC gives access to the audio data channels. It 
   - 48000 Hz (preferred)
   - 32000 Hz
   - 24000 Hz
-  - 22050 Hz (specifically for APRSdroid, has approx. 90 ppm of frequency error)
+  - 22050 Hz (specifically for APRSdroid)
   - 16000 Hz
   - 12000 Hz
-  - 11025 Hz (has approx. 90 ppm of frequency error)
+  - 11025 Hz
   - 8000 Hz
 
 Since firmware version 1.2.0, a CM108 style PTT interface is available for public testing. This interface works in parallel to the COM-port PTT.

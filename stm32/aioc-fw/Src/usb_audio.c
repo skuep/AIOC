@@ -9,7 +9,7 @@
 #include <math.h>
 
 /* The one and only supported sample rate */
-#define DEFAULT_SAMPLE_RATE   	48000
+#define DEFAULT_SAMPLE_RATE       48000
 /* This is feedback average responsivity with a denominator of 65536 */
 #define SPEAKER_FEEDBACK_AVG    32
 /* This is buffer level average responsivity with a denominator of 65536 */
@@ -28,12 +28,13 @@ static rational_decimator_t adc_resampler;
 typedef enum {
     SAMPLERATE_96000,
     SAMPLERATE_48000, /* The high-quality default */
+    SAMPLERATE_44010,
     SAMPLERATE_32000, /* For completeness sake, support 32 kHz as well */
     SAMPLERATE_24000, /* Just half of 48 kHz */
-    SAMPLERATE_22050, /* For APRSdroid support. NOTE: Has approx. 90 ppm of clock frequency error (ca. 22052 Hz) */
+    SAMPLERATE_22050, /* For APRSdroid support */
     SAMPLERATE_16000, /* On ARM platforms, direwolf will by default, divide configured sample rate by 3, thus support 16 kHz */
     SAMPLERATE_12000, /* Just a quarter of 48 kHz */
-    SAMPLERATE_11025, /* NOTE: Has approx. 90 ppm of clock frequency error (ca. 11026 Hz) */
+    SAMPLERATE_11025,
     SAMPLERATE_8000,
     SAMPLERATE_COUNT /* Has to be last element */
 } samplerate_t;
@@ -67,8 +68,9 @@ static volatile state_t speakerState = STATE_OFF;
 static audio_control_range_4_n_t(SAMPLERATE_COUNT) sampleFreqRng = {
     .wNumSubRanges = SAMPLERATE_COUNT,
     .subrange = {
-	      [SAMPLERATE_96000] = {.bMin = 96000, .bMax = 96000, .bRes = 0},
+        [SAMPLERATE_96000] = {.bMin = 96000, .bMax = 96000, .bRes = 0},
         [SAMPLERATE_48000] = {.bMin = 48000, .bMax = 48000, .bRes = 0},
+        [SAMPLERATE_44010] = {.bMin = 44010, .bMax = 44010, .bRes = 0},
         [SAMPLERATE_32000] = {.bMin = 32000, .bMax = 32000, .bRes = 0},
         [SAMPLERATE_24000] = {.bMin = 24000, .bMax = 24000, .bRes = 0},
         [SAMPLERATE_22050] = {.bMin = 22050, .bMax = 22050, .bRes = 0},
@@ -87,7 +89,7 @@ static void Timeout_Timers_Init(void);
 
 /* ADC clock functions */
 static uint32_t ADC_get_sample_rate() {
-	return HAL_RCC_GetSysClockFreq() / 2 / 15;
+    return HAL_RCC_GetSysClockFreq() / 2 / 15;
 }
 
 //--------------------------------------------------------------------+
@@ -208,8 +210,8 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 
 
             rational_decimator_reset(&adc_resampler);
-        	rational_decimator_set_rate(&adc_resampler, ADC_get_sample_rate(), microphoneSampleFreq);
-        	microphoneSampleFreqCfg = ADC_get_sample_rate() / rational_decimator_get_integer_rate(&adc_resampler);
+            rational_decimator_set_rate(&adc_resampler, ADC_get_sample_rate(), microphoneSampleFreq);
+            microphoneSampleFreqCfg = microphoneSampleFreq;
 
             /* Update debug register */
             settingsRegMap[SETTINGS_REG_INFO_AUDIO2] = (((uint32_t) microphoneSampleFreqCfg) << SETTINGS_REG_INFO_AUDIO2_RECRATE_OFFS) & SETTINGS_REG_INFO_AUDIO2_RECRATE_MASK;
@@ -531,7 +533,7 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
 
     if (microphoneState == STATE_START) {
         /* Start ADC sampling as soon as device stacks starts loading data (will be a ZLP for first frame) */
-    	rational_decimator_reset(&adc_resampler);
+        rational_decimator_reset(&adc_resampler);
         NVIC_EnableIRQ(DMA2_Channel1_IRQn);
         microphoneState = STATE_RUN;
 
@@ -888,13 +890,13 @@ static void Timer_DAC_Init(void)
 }
 
 static void ADC_process_samples(uint16_t* buf) {
-	uint32_t samples = rational_decimator_process_block_u16(&adc_resampler, buf, ADC_BUFFER_LEN/2);
-	uint32_t* output_buffer = rational_decimator_get_outputs(&adc_resampler);
-	uint32_t output_scale = rational_decimator_get_integer_rate(&adc_resampler);
+    uint32_t samples = rational_decimator_process_block_u16(&adc_resampler, buf, ADC_BUFFER_LEN/2);
+    uint32_t* output_buffer = rational_decimator_get_outputs(&adc_resampler);
 
-	for(int i = 0;i < samples;i++) {
+    for(int i = 0;i < samples;i++) {
         /* Get ADC sample */
-        int16_t sample = ((int32_t) (output_buffer[i] * 16 / output_scale) - 32768) & 0xFFFFU;
+        int32_t scaled_sample = rational_decimator_scale(&adc_resampler, output_buffer[i] * 16);
+        int16_t sample = (scaled_sample - 32768) & 0xFFFFU;
 
         /* Automatic COS */
         uint16_t cosThreshold = (settingsRegMap[SETTINGS_REG_VCOS_LVLCTRL] & SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_OFFS;
@@ -911,19 +913,19 @@ static void ADC_process_samples(uint16_t* buf) {
         sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
 
         /* Store in FIFO */
-		tud_audio_write (&sample, sizeof(sample));
-	}
+        tud_audio_write (&sample, sizeof(sample));
+    }
 }
 
 void DMA2_Channel1_IRQHandler(void) {
-	if(DMA2->ISR & DMA_ISR_HTIF1) {
-		DMA2->IFCR = DMA_IFCR_CHTIF1;
-		ADC_process_samples(ADC_samples);
-	}
-	if(DMA2->ISR & DMA_ISR_TCIF1) {
-		DMA2->IFCR = DMA_IFCR_CTCIF1;
-		ADC_process_samples(&ADC_samples[ADC_BUFFER_LEN/2]);
-	}
+    if(DMA2->ISR & DMA_ISR_HTIF1) {
+        DMA2->IFCR = DMA_IFCR_CHTIF1;
+        ADC_process_samples(ADC_samples);
+    }
+    if(DMA2->ISR & DMA_ISR_TCIF1) {
+        DMA2->IFCR = DMA_IFCR_CTCIF1;
+        ADC_process_samples(&ADC_samples[ADC_BUFFER_LEN/2]);
+    }
 }
 
 static void ADC_Init(void)
@@ -960,15 +962,15 @@ static void ADC_Init(void)
 
     /* Enable peripheral to memory from ADC2 */
     DMA2_Channel1->CCR = (0x3 << DMA_CCR_PL_Pos)/* High priority */
-					   | (0x1 << DMA_CCR_MSIZE_Pos) /* 16 bits */
-					   | (0x1 << DMA_CCR_PSIZE_Pos) /* 16 bits */
-					   | (DMA_CCR_MINC) /* Memory increment mode */
-					   | (DMA_CCR_CIRC) /* Circular mode */
-					   | (DMA_CCR_HTIE) /* Enable half buffer interrupt */
-					   | (DMA_CCR_TCIE); /* Enable full buffer interrupt */
+                       | (0x1 << DMA_CCR_MSIZE_Pos) /* 16 bits */
+                       | (0x1 << DMA_CCR_PSIZE_Pos) /* 16 bits */
+                       | (DMA_CCR_MINC) /* Memory increment mode */
+                       | (DMA_CCR_CIRC) /* Circular mode */
+                       | (DMA_CCR_HTIE) /* Enable half buffer interrupt */
+                       | (DMA_CCR_TCIE); /* Enable full buffer interrupt */
 
-	/* Buffer length */
-	DMA2_Channel1->CNDTR = ADC_BUFFER_LEN;
+    /* Buffer length */
+    DMA2_Channel1->CNDTR = ADC_BUFFER_LEN;
 
     /* ADC conversion result source */
     DMA2_Channel1->CPAR = (uint32_t)&ADC2->DR;
