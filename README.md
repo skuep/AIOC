@@ -132,7 +132,9 @@ The serial interface of the AIOC enumerates as a regular COM (Windows) or ttyACM
 __Note__ before firmware version 1.2.0, PTT was asserted by ``DTR=1`` (ignoring RTS) which caused problems with certain radios when using the serial port for programming the radio e.g. using CHIRP.
 
 The soundcard interface of the AIOC gives access to the audio data channels. It has one mono microphone channel and one mono speaker channel and currently supports the following baudrates:
+  - 96000 Hz
   - 48000 Hz (preferred)
+  - 44100 Hz
   - 32000 Hz
   - 24000 Hz
   - 22050 Hz (specifically for APRSdroid)
