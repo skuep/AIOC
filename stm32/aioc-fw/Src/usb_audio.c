@@ -19,7 +19,7 @@
 /* We try to stay on this target with the buffer level */
 #define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB and maximum sample rate */
 /* DMA buffer length for ADC */
-#define ADC_BUFFER_LEN 4096
+#define ADC_BUFFER_LEN          128
 
 /* ADC DSP variables */
 static uint16_t ADC_samples[ADC_BUFFER_LEN];
@@ -930,8 +930,13 @@ void DMA2_Channel1_IRQHandler(void) {
 
 static void ADC_Init(void)
 {
+
     /* Set ADC clock divisor */
     RCC->CFGR2 |= RCC_CFGR2_ADCPRE12_DIV2;
+
+    for (uint32_t i=0; i<100; i++) {
+        asm volatile ("nop");
+    }
 
     __HAL_RCC_ADC2_CLK_ENABLE();
     __HAL_RCC_DMA2_CLK_ENABLE();
@@ -939,7 +944,7 @@ static void ADC_Init(void)
     ADC2->CR = 0x00 << ADC_CR_ADVREGEN_Pos;
     ADC2->CR = 0x01 << ADC_CR_ADVREGEN_Pos;
 
-    for (uint32_t i=0; i<200; i++) {
+    for (uint32_t i=0; i<720; i++) {
         asm volatile ("nop");
     }
 
