@@ -24,7 +24,7 @@ static uint32_t gcd(uint32_t a, uint32_t b) {
 }
 
 static uint32_t min(uint32_t a, uint32_t b) {
-    return (a>b) ? b : a;
+    return (a > b) ? b : a;
 }
 
 void rational_decimator_set_rate(rational_decimator_t* rd, uint32_t input_rate, uint32_t output_rate) {
@@ -46,11 +46,15 @@ uint32_t rational_decimator_process_block_u16(rational_decimator_t* rd, uint16_t
     uint32_t cur_sample = rd->current_sample;
     uint32_t rate = rd->integer_rate;
     while(len > 0) {
-        uint32_t next_block = min(min(rate - cur_sample, len), rate);
+        uint32_t next_block = min(rate - cur_sample, len);
+
+        /* Simple moving average filter */
 #pragma GCC unroll 4
         for(int i = 0;i < next_block;i++) {
-            cur_sum += *buf++;
+            cur_sum += *buf;
+            buf++;
         }
+
         cur_sample += next_block;
         len -= next_block;
 
@@ -60,9 +64,11 @@ uint32_t rational_decimator_process_block_u16(rational_decimator_t* rd, uint16_t
                 rd->output_buffer[rd->output_samples++] = cur_sum;
                 cur_sample = 0;
                 cur_sum = 0;
+                rd->frac_samples_left = rd->frac_rate_n;
             } else if (len > 0) {
                 // Handle the fractional sample if there is a sample left
-                uint32_t cur_frac_sample = *buf++;
+                uint32_t cur_frac_sample = *buf;
+                buf++;
                 len--;
 
                 // Add the fractional sample
@@ -97,3 +103,79 @@ uint32_t* rational_decimator_get_outputs(rational_decimator_t* rd) {
     rd->output_samples = 0;
     return rd->output_buffer;
 }
+
+void rational_interpolator_init(rational_interpolator_t* ri) {
+    memset(ri, 0, sizeof(*ri));
+    ri->integer_rate = 1;
+}
+
+void rational_interpolator_reset(rational_interpolator_t* ri) {
+    ri->current_val = 0;
+    ri->current_sample = 0;
+    ri->frac_samples_left = ri->frac_rate_n;
+}
+
+void rational_interpolator_set_rate(rational_interpolator_t* ri, uint32_t input_rate, uint32_t output_rate) {
+    uint32_t n = output_rate % input_rate;
+    uint32_t d = input_rate;
+    ri->integer_rate = output_rate / input_rate;
+    ri->frac_rate_n = n / gcd(n,d);
+    ri->frac_rate_d = d / gcd(n,d);
+}
+
+void rational_interpolator_fill_buffer(rational_interpolator_t* ri, uint16_t* buf, uint32_t len) {
+    uint32_t cur_val = ri->current_val;
+    uint32_t cur_sample = ri->current_sample;
+    uint32_t rate = ri->integer_rate;
+    while(len > 0) {
+        uint32_t next_block = min(rate - cur_sample, len);
+
+        /* Simple replication of samples */
+#pragma GCC unroll 4
+        for(int i = 0;i < next_block;i++) {
+            *buf = cur_val;
+            buf++;
+        }
+
+        cur_sample += next_block;
+        len -= next_block;
+
+        if (cur_sample >= rate) {
+            uint32_t frac_samples_left = ri->frac_samples_left;
+            if (frac_samples_left == 0) {
+                cur_sample = 0;
+                cur_val = DAC_get_next_sample();
+                ri->frac_samples_left = ri->frac_rate_n;
+            } else if (len > 0) {
+                // Handle the fractional sample if there is a sample left
+                uint32_t next_sample = DAC_get_next_sample();
+
+                // Average the fractional samples
+                uint32_t n = ri->frac_rate_n;
+                uint32_t d = ri->frac_rate_d;
+                uint32_t next_frac_left = (d - frac_samples_left);
+                uint32_t averaged_sample = (cur_val * frac_samples_left + next_sample * next_frac_left) / d;
+
+                // Write the sample to output buffer
+                *buf = averaged_sample;
+                buf++;
+                len--;
+
+                // Initialize the next block with the leftover fractional sample;
+                cur_val = next_sample;
+
+                // Calculate the next fractional sample amount
+                if (next_frac_left > n) {
+                    cur_sample = 1;
+                    ri->frac_samples_left = n + d - next_frac_left;
+                } else {
+                    cur_sample = 0;
+                    ri->frac_samples_left = n - next_frac_left;
+                }
+            }
+        }
+    }
+    ri->current_val = cur_val;
+    ri->current_sample = cur_sample;
+}
+
