@@ -24,6 +24,8 @@ typedef struct {
     uint32_t integer_rate;
     uint32_t frac_rate_n, frac_rate_d;
     uint32_t current_sample, frac_samples_left;
+    uint16_t sd_error;
+    uint16_t sd_sum;
 } rational_interpolator_t;
 
 void rational_interpolator_init(rational_interpolator_t* ri);
