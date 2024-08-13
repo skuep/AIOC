@@ -1,4 +1,5 @@
 #include "audio_dsp.h"
+#include "usb_audio.h"
 
 #include <string.h>
 
@@ -123,17 +124,37 @@ void rational_interpolator_set_rate(rational_interpolator_t* ri, uint32_t input_
     ri->frac_rate_d = d / gcd(n,d);
 }
 
+static inline uint16_t saturating_sub(uint16_t a, uint16_t b) {
+    //return a - b;
+    return (b > a) ? 0 : a - b;
+}
+
+static inline uint16_t saturating_add(uint16_t a, uint16_t b) {
+    //return a + b;
+    return (b > (0xFFFF ^ a)) ? 0 : a + b;
+}
+
+#define sigma_delta_modulator(sample, output) {                             \
+    /* sd_sum += sample - sd_error */                                       \
+    /* We know that sd_sum >= sd_error, so no saturating subtract needed */ \
+    sd_sum = saturating_add(sample, sd_sum - sd_error);                     \
+    /* 4 bits that can't be converted by the DAC */                         \
+    sd_error = sd_sum & 0xFFF0;                                             \
+    output = sd_error; }
+
 void rational_interpolator_fill_buffer(rational_interpolator_t* ri, uint16_t* buf, uint32_t len) {
     uint32_t cur_val = ri->current_val;
     uint32_t cur_sample = ri->current_sample;
     uint32_t rate = ri->integer_rate;
+    uint16_t sd_error = ri->sd_error;
+    uint16_t sd_sum = ri->sd_sum;
     while(len > 0) {
         uint32_t next_block = min(rate - cur_sample, len);
 
         /* Simple replication of samples */
 #pragma GCC unroll 4
         for(int i = 0;i < next_block;i++) {
-            *buf = cur_val;
+            sigma_delta_modulator(cur_val, *buf);
             buf++;
         }
 
@@ -157,7 +178,7 @@ void rational_interpolator_fill_buffer(rational_interpolator_t* ri, uint16_t* bu
                 uint32_t averaged_sample = (cur_val * frac_samples_left + next_sample * next_frac_left) / d;
 
                 // Write the sample to output buffer
-                *buf = averaged_sample;
+                sigma_delta_modulator(averaged_sample, *buf);
                 buf++;
                 len--;
 
@@ -177,5 +198,7 @@ void rational_interpolator_fill_buffer(rational_interpolator_t* ri, uint16_t* bu
     }
     ri->current_val = cur_val;
     ri->current_sample = cur_sample;
+    ri->sd_error = sd_error;
+    ri->sd_sum = sd_sum;
 }
 
