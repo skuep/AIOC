@@ -76,7 +76,7 @@ SECTIONS
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
 
-  .eeprom 0x0801F000 :
+  .eeprom 0x0801F000 (NOLOAD) :
   {
     _eeprom = .;
     KEEP(*(.eeprom))
