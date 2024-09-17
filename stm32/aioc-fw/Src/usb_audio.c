@@ -776,8 +776,8 @@ void TIM16_IRQHandler(void)
 
             /* Assert enabled PTTs */
             uint8_t pttMask = IO_PTT_MASK_NONE;
-            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_VPTT_MASK ? IO_PTT_MASK_PTT1 : 0;
-            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_VPTT_MASK ? IO_PTT_MASK_PTT2 : 0;
+            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_VPTT_MASK ? IO_PTT_MASK_PTT1 : 0;
+            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_VPTT_MASK ? IO_PTT_MASK_PTT2 : 0;
 
             IO_PTTAssert(pttMask);
         }
@@ -790,8 +790,8 @@ void TIM16_IRQHandler(void)
 
         /* Deassert enabled PTTs */
         uint8_t pttMask = IO_PTT_MASK_NONE;
-        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_VPTT_MASK ? IO_PTT_MASK_PTT1 : 0;
-        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_VPTT_MASK ? IO_PTT_MASK_PTT2 : 0;
+        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_VPTT_MASK ? IO_PTT_MASK_PTT1 : 0;
+        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_VPTT_MASK ? IO_PTT_MASK_PTT2 : 0;
 
         IO_PTTDeassert(pttMask);
     }
