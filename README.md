@@ -22,7 +22,8 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 - Compact form-factor (DIY overmolded enclosure is currently TBD)
 - Based on easy-to-hack **STM32F302** with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
 - Can support Dual-PTT HTs
-
+- Supports all popular OSes (Linux, Windows and MacOS with limitations [[*]](https://github.com/skuep/AIOC/issues/13))
+  
 ## Compatibility
 ### Software
   - [Direwolf](#notes-on-direwolf) as AX.25 modem/APRS en+decoder/...
