@@ -2,9 +2,9 @@
 #include "aioc.h"
 #include "settings.h"
 #include "led.h"
-#include "ptt.h"
 #include "usb.h"
 #include <assert.h>
+#include <io.h>
 #include <stdio.h>
 
 // from ST application note AN2606
@@ -185,7 +185,7 @@ int main(void)
     LED_MODE(0, LED_MODE_SLOWPULSE2X);
     LED_MODE(1, LED_MODE_SLOWPULSE2X);
 
-    PTT_Init();
+    IO_Init();
 
     USB_Init();
 

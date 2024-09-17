@@ -1,6 +1,6 @@
+#include <io.h>
 #include "usb_hid.h"
 #include "tusb.h"
-#include "ptt.h"
 #include "settings.h"
 #include "usb_descriptors.h"
 
@@ -28,41 +28,41 @@ static bool SendReport(void)
 
 static void ControlPTT(uint8_t gpio)
 {
-    uint8_t pttMask = PTT_MASK_NONE;
+    uint8_t pttMask = IO_PTT_MASK_NONE;
 
     if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_CM108GPIO1_MASK) {
-        pttMask |= gpio & 0x01 ? PTT_MASK_PTT1 : 0;
+        pttMask |= gpio & 0x01 ? IO_PTT_MASK_PTT1 : 0;
     }
 
     if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_CM108GPIO2_MASK) {
-        pttMask |= gpio & 0x02 ? PTT_MASK_PTT1 : 0;
+        pttMask |= gpio & 0x02 ? IO_PTT_MASK_PTT1 : 0;
     }
 
     if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_CM108GPIO3_MASK) {
-        pttMask |= gpio & 0x04 ? PTT_MASK_PTT1 : 0;
+        pttMask |= gpio & 0x04 ? IO_PTT_MASK_PTT1 : 0;
     }
 
     if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_CM108GPIO4_MASK) {
-        pttMask |= gpio & 0x08 ? PTT_MASK_PTT1 : 0;
+        pttMask |= gpio & 0x08 ? IO_PTT_MASK_PTT1 : 0;
     }
 
     if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_CM108GPIO1_MASK) {
-        pttMask |= gpio & 0x01 ? PTT_MASK_PTT2 : 0;
+        pttMask |= gpio & 0x01 ? IO_PTT_MASK_PTT2 : 0;
     }
 
     if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_CM108GPIO2_MASK) {
-        pttMask |= gpio & 0x02 ? PTT_MASK_PTT2 : 0;
+        pttMask |= gpio & 0x02 ? IO_PTT_MASK_PTT2 : 0;
     }
 
     if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_CM108GPIO3_MASK) {
-        pttMask |= gpio & 0x04 ? PTT_MASK_PTT2 : 0;
+        pttMask |= gpio & 0x04 ? IO_PTT_MASK_PTT2 : 0;
     }
 
     if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_CM108GPIO4_MASK) {
-        pttMask |= gpio & 0x08 ? PTT_MASK_PTT2 : 0;
+        pttMask |= gpio & 0x08 ? IO_PTT_MASK_PTT2 : 0;
     }
 
-    PTT_Control(pttMask);
+    IO_PTTControl(pttMask);
 }
 
 // Invoked when received GET_REPORT control request
