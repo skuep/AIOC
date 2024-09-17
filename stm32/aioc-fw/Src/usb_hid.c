@@ -5,9 +5,11 @@
 #include "usb_descriptors.h"
 
 #define USB_HID_INOUT_REPORT_LEN  4
+#define USB_HID_FEATURE_REPORT_LEN 6
 
 static uint8_t buttonState = 0x00;
 static uint8_t gpioState = 0x00;
+static uint8_t currentAddress = 0x0000;
 
 static void MakeReport(uint8_t * buffer)
 {
@@ -70,27 +72,38 @@ static void ControlPTT(uint8_t gpio)
 // Return zero will cause the stack to STALL request
 uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen)
 {
-  (void) itf;
-  (void) report_id;
-  (void) buffer;
-  (void) reqlen;
+    (void) itf;
+    (void) report_id;
+    (void) buffer;
+    (void) reqlen;
 
-  switch (report_type) {
-      case HID_REPORT_TYPE_INPUT:
-          TU_ASSERT(reqlen >= USB_HID_INOUT_REPORT_LEN, 0);
+    switch (report_type) {
+        case HID_REPORT_TYPE_INPUT:
+            TU_ASSERT(reqlen >= USB_HID_INOUT_REPORT_LEN, 0);
 
-          MakeReport(buffer);
-          return USB_HID_INOUT_REPORT_LEN;
+            MakeReport(buffer);
+            return USB_HID_INOUT_REPORT_LEN;
 
-      case HID_REPORT_TYPE_FEATURE:
-          return Settings_RegRead(report_id, buffer, reqlen);
+        case HID_REPORT_TYPE_FEATURE:
+            TU_ASSERT(reqlen >= USB_HID_FEATURE_REPORT_LEN, 0);
+            uint32_t data;
+            Settings_RegRead(currentAddress, &data);
 
-      default:
-          TU_BREAKPOINT();
-          break;
-  }
+            buffer[0] = 0x00;
+            buffer[1] = currentAddress;
+            buffer[2] = (uint8_t) (data >> 0);
+            buffer[3] = (uint8_t) (data >> 8);
+            buffer[4] = (uint8_t) (data >> 16);
+            buffer[5] = (uint8_t) (data >> 24);
 
-  return 0;
+            return reqlen;
+
+        default:
+            TU_BREAKPOINT();
+            break;
+    }
+
+    return 0;
 }
 
 // Invoked when received SET_REPORT control request
@@ -125,28 +138,34 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
             break;
 
         case HID_REPORT_TYPE_FEATURE:
-            if (report_id == 0) {
-                /* Special HID feature report case. Not a valid register map address to write.
-                 * It is used for other functions (store, recall, defaults...) */
-                uint32_t data = (   (((uint32_t) buffer[0]) << 0) |
-                                    (((uint32_t) buffer[1]) << 8) |
-                                    (((uint32_t) buffer[2]) << 16) |
-                                    (((uint32_t) buffer[3]) << 24) );
+            TU_ASSERT(bufsize == USB_HID_FEATURE_REPORT_LEN, /* */);
+            uint8_t ctrlWord = ((((uint8_t)  buffer[0]) <<  0) );
+            uint8_t address =  ((((uint8_t)  buffer[1]) <<  0) );
+            uint32_t data = (   (((uint32_t) buffer[2]) <<  0) |
+                                (((uint32_t) buffer[3]) <<  8) |
+                                (((uint32_t) buffer[4]) << 16) |
+                                (((uint32_t) buffer[5]) << 24) );
 
-                if (data & 0x00000010UL) {
-                    Settings_Default();
-                }
 
-                if (data & 0x00000040UL) {
-                    Settings_Recall();
-                }
 
-                if (data & 0x00000080UL) {
-                    Settings_Store();
-                }
-            } else {
-                Settings_RegWrite(report_id, buffer, bufsize);
+            if (ctrlWord & 0x10UL) {
+                Settings_Default();
             }
+
+            if (ctrlWord & 0x40UL) {
+                Settings_Recall();
+            }
+
+            if (ctrlWord & 0x01UL) {
+                /* Write strobe */
+                Settings_RegWrite(address, data);
+            }
+
+            if (ctrlWord & 0x80UL) {
+                Settings_Store();
+            }
+
+            currentAddress = address;
             break;
 
         default:

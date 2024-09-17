@@ -98,6 +98,10 @@ uint8_t const desc_hid_report[] = {
       HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_REPORT_COUNT( 4                                       ),
       HID_OUTPUT      ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
+      /* Feature for configuring AIOC */
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
+      HID_REPORT_COUNT( 6                                       ),
+      HID_FEATURE     ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
     HID_COLLECTION_END
 };
 

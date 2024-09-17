@@ -340,8 +340,8 @@ extern uint32_t settingsRegMap[SETTINGS_REGMAP_SIZE];
 
 
 void Settings_Init();
-uint8_t Settings_RegWrite(uint8_t address, const uint8_t * buffer, uint8_t bufsize);
-uint8_t Settings_RegRead(uint8_t address, uint8_t * buffer, uint8_t bufsize);
+uint8_t Settings_RegWrite(uint8_t address, uint32_t data);
+uint8_t Settings_RegRead(uint8_t address, uint32_t * data);
 void Settings_Store(void);
 void Settings_Recall(void);
 void Settings_Default(void);

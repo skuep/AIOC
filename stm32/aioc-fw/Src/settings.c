@@ -13,42 +13,30 @@ void Settings_Init()
     Settings_Recall();
 }
 
-uint8_t Settings_RegWrite(uint8_t address, const uint8_t * buffer, uint8_t bufsize)
+uint8_t Settings_RegWrite(uint8_t address, uint32_t data)
 {
     if (address < SETTINGS_REGMAP_READONLYADDR) {
-        assert(bufsize == sizeof(uint32_t));
-
-        uint32_t data = (   (((uint32_t) buffer[0]) << 0) |
-                            (((uint32_t) buffer[1]) << 8) |
-                            (((uint32_t) buffer[2]) << 16) |
-                            (((uint32_t) buffer[3]) << 24) );
-
         __disable_irq();
         settingsRegMap[address] = data;
         __enable_irq();
 
-        return bufsize;
+        return 1;
     }
 
     return 0;
 }
 
-uint8_t Settings_RegRead(uint8_t address, uint8_t * buffer, uint8_t bufsize)
+uint8_t Settings_RegRead(uint8_t address, uint32_t * data)
 {
     if (address < SETTINGS_REGMAP_SIZE) {
-        assert(bufsize == sizeof(uint32_t));
-
         __disable_irq();
-        uint64_t data = settingsRegMap[address];
+        *data = settingsRegMap[address];
         __enable_irq();
 
-        buffer[0] = (uint8_t) (data >> 0);
-        buffer[1] = (uint8_t) (data >> 8);
-        buffer[2] = (uint8_t) (data >> 16);
-        buffer[3] = (uint8_t) (data >> 24);
-
-        return bufsize;
+        return 1;
     }
+
+    return 0;
 }
 
 void Settings_Store(void)
