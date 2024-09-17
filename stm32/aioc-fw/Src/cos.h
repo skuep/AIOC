@@ -4,9 +4,10 @@
 #include <stdint.h>
 #include "stm32f3xx_hal.h"
 #include "usb_hid.h"
+#include "usb_serial.h"
 #include "settings.h"
 
-static inline void COS_SetState(uint8_t state)
+static inline void COS_VirtualSetState(uint8_t state)
 {
     LED_SET(0, state & 0x01 ? 1 : 0);
 

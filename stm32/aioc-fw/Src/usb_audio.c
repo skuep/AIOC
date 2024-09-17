@@ -1,9 +1,9 @@
+#include <io.h>
 #include "usb_audio.h"
 #include "stm32f3xx_hal.h"
 #include "aioc.h"
 #include "tusb.h"
 #include "usb.h"
-#include "ptt.h"
 #include "cos.h"
 #include <math.h>
 
@@ -775,11 +775,11 @@ void TIM16_IRQHandler(void)
             settingsRegMap[SETTINGS_REG_INFO_AUDIO0] |= SETTINGS_REG_INFO_AIOC0_VPTTSTATE_MASK;
 
             /* Assert enabled PTTs */
-            uint8_t pttMask = PTT_MASK_NONE;
-            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_VPTT_MASK ? PTT_MASK_PTT1 : 0;
-            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_VPTT_MASK ? PTT_MASK_PTT2 : 0;
+            uint8_t pttMask = IO_PTT_MASK_NONE;
+            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_VPTT_MASK ? IO_PTT_MASK_PTT1 : 0;
+            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_VPTT_MASK ? IO_PTT_MASK_PTT2 : 0;
 
-            PTT_Assert(pttMask);
+            IO_PTTAssert(pttMask);
         }
     } else if (flags & TIM_SR_CC1IF) {
         /* The idle timeout (without any action on the DAC) was reached. Disable timer and deassert PTT */
@@ -789,11 +789,11 @@ void TIM16_IRQHandler(void)
         settingsRegMap[SETTINGS_REG_INFO_AUDIO0] &= ~SETTINGS_REG_INFO_AIOC0_VPTTSTATE_MASK;
 
         /* Deassert enabled PTTs */
-        uint8_t pttMask = PTT_MASK_NONE;
-        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_VPTT_MASK ? PTT_MASK_PTT1 : 0;
-        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_VPTT_MASK ? PTT_MASK_PTT2 : 0;
+        uint8_t pttMask = IO_PTT_MASK_NONE;
+        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_PTT1SRC_VPTT_MASK ? IO_PTT_MASK_PTT1 : 0;
+        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_PTT2SRC_VPTT_MASK ? IO_PTT_MASK_PTT2 : 0;
 
-        PTT_Deassert(pttMask);
+        IO_PTTDeassert(pttMask);
     }
 
     TIM16->SR = ~flags;
@@ -815,7 +815,7 @@ void TIM17_IRQHandler(void)
             settingsRegMap[SETTINGS_REG_INFO_AUDIO0] |= SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK;
 
             /* Set COS state */
-            COS_SetState(0x01);
+            COS_VirtualSetState(0x01);
         }
     } else if (flags & TIM_SR_CC1IF) {
         /* The idle timeout (without any action on the ADC) was reached. Disable timer and notify host */
@@ -825,7 +825,7 @@ void TIM17_IRQHandler(void)
         settingsRegMap[SETTINGS_REG_INFO_AUDIO0] &= ~SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK;
 
         /* Set COS state */
-        COS_SetState(0x00);
+        COS_VirtualSetState(0x00);
     }
 
     TIM17->SR = ~flags;
