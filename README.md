@@ -77,6 +77,8 @@ This is the process I use for building. See photographs in ``images`` folder.
 - Turn around PCB and solder remaining solder lugs
 - Optionally you can 3D print a case for your AIOC. [This model](https://www.thingiverse.com/thing:6144997) has been designed by a third party but is confirmed to work with the AIOC.
 
+__Note__ It is unfortunately quite common that the TRS connectors have intermittent contact after soldering the ring or tip tabs. In this case, it helps to re-melt the solder joint, then using e.g. tweezer slightly assert some sideways force onto the contact and let the solder joint solidify **while applying the pressure on the contact**. This will keep some tension on the area where the tab internally connects to the barrel and thus give a solid (spring loaded) connection.
+
 ## How To Build
 For building the firmware, clone the repository and initialize the submodules. Create an empty workspace with the STM32CubeIDE and import the project.
   - ``git clone <repositry url>``
