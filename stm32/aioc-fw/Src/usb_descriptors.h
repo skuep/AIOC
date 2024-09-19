@@ -1,6 +1,8 @@
 #ifndef USB_DESCRIPTORS_H_
 #define USB_DESCRIPTORS_H_
 
+#include <stdbool.h>
+
 /* Interfaces */
 enum USB_DESCRIPTORS_ITF {
     ITF_NUM_AUDIO_CONTROL = 0,
@@ -104,7 +106,7 @@ enum USB_STRING_IDX {
     TUD_AUDIO_DESC_STD_AS_ISO_EP_LEN + \
     TUD_AUDIO_DESC_CS_AS_ISO_EP_LEN)
 
-#define AIOC_AUDIO_DESCRIPTOR(_itfnum, _stridx, _nBytesPerSample, _nBitsUsedPerSample, _epin, _epinsize, _epout, _epoutsize, _epfb) \
+#define AIOC_AUDIO_DESCRIPTOR(_itfnum, _stridx, _nBytesPerSample, _nBitsUsedPerSample, _epin, _epinsize, _epout, _epoutsize, _epfb, _epfbsize) \
     /* Standard Interface Association Descriptor (IAD) */ \
     TUD_AUDIO_DESC_IAD(_itfnum, AUDIO_NUM_INTERFACES, /*_stridx*/ 0x00), \
     /* Audio Control Interface */ \
@@ -138,7 +140,7 @@ enum USB_STRING_IDX {
     /* Class-Specific AS Isochronous Audio Data Endpoint Descriptor(4.10.1.2) */ \
     TUD_AUDIO_DESC_CS_AS_ISO_EP(AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, AUDIO_CTRL_NONE, AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED, 0x0000), \
     /* Standard AS Isochronous Feedback Endpoint Descriptor(4.10.2.1) */ \
-    TUD_AUDIO_DESC_STD_AS_ISO_FB_EP(_epfb, 1), \
+    TUD_AUDIO_DESC_STD_AS_ISO_FB_EP(_epfb, _epfbsize, 1), \
     /* Microphone Interface */ \
     /* Standard AS Interface Descriptor(4.9.1) */ \
     /* Interface 1, Alternate 0 - default alternate setting with 0 bandwidth */ \
@@ -173,5 +175,7 @@ enum USB_STRING_IDX {
 #define AIOC_DFU_RT_DESC_LEN   TUD_DFU_RT_DESC_LEN
 
 #define AIOC_DFU_RT_DESCRIPTOR TUD_DFU_RT_DESCRIPTOR
+
+bool USB_DescUAC2Quirk(void);
 
 #endif /* USB_DESCRIPTORS_H_ */
