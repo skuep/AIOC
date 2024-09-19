@@ -651,6 +651,17 @@ void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedba
     feedback_param->method = AUDIO_FEEDBACK_METHOD_FREQUENCY_FIXED;
 }
 
+bool tud_audio_feedback_format_correction_cb(uint8_t func_id)
+{
+    /* Use the quirk detection to detect whether we need format correction (10.14) according to the USB specification (MacOS)
+     * or whether we use no correction (16.16) as a quirk (Windows). Linux works either way. */
+    if (tud_speed_get() == TUSB_SPEED_FULL) {
+        return USB_DescUAC2Quirk() ? false : true;
+    } else {
+        return false;
+    }
+}
+
 TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t frame_number, uint8_t interval_shift)
 {
     static uint32_t prev_cycles = 0;
