@@ -8,8 +8,6 @@ This is the Ham Radio *All-in-one-Cable*. **It is currently still being tested!*
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
-This fork replaces USB-C connector used in original design with another one with better availability and more common footprint.
-
 ## What does it do?
 The AIOC is a small adapter with a USB-C connector that enumerates itself as a sound-card (e.g. for APRS purposes), a virtual tty ("COM Port") for programming and asserting the PTT (Push-To-Talk) as well as a CM108 compatible HID endpoint for CM108-style PTT (new in firmware version 1.2.0).
 
