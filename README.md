@@ -40,7 +40,8 @@ There is also a German 4-part article with instructions [here](https://dl-nordwe
 ### Tested Radios (so far)
   - Wouxun UV-9D Mate (CHIRP + APRS)
   - Baofeng UV-5R (CHIRP + APRS)
-  - BTECH 6X2 (CHIRP) 
+  - BTECH 6X2 (CHIRP)
+  - Quansheng UV-K5 ([Quansheng Dock](https://github.com/nicsure/QuanshengDock), [Egzumer](https://github.com/egzumer/uv-k5-firmware-custom) or regular)
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
@@ -145,7 +146,7 @@ Direwolf on Linux is confirmed working, please report any issues. Note that curr
 While they are annoying, they are safe to ignore and require changes in the upstream direwolf sourcecode. See https://github.com/wb2osz/direwolf/issues/448 for more details.
 
 ## Notes on Direwolf
-- Follow the regular setup guide with direwolf to determine the correct audio device to use. 
+- Follow the regular setup guide with [Direwolf](https://github.com/wb2osz/direwolf) to determine the correct audio device to use. 
   For the serial and CM108 PTT interfaces on Linux, you need to set correct permissions on the ttyACM/hidraw devices. Consult Direwolf manual.
 - Configure the device as follows
   ````
@@ -177,7 +178,7 @@ Edit `usbradio.conf` (menu sections: 6 > H) (for a Puxing PX-888 cheap Chineese 
 
 
 ## Notes on APRSdroid
-APRSdroid support has been added by AIOC by implementing support for the fixed 22050 Hz sample rate that APRSdroid requires. 
+[APRSdroid](https://aprsdroid.org/) support has been added by AIOC by implementing support for the fixed 22050 Hz sample rate that APRSdroid requires. 
 It is important to notice, that the exact sample rate can not be achieved by the hardware, due to the 8 MHz crystal. 
 The actual sample rate used is 22052 Hz (which represents around 90 ppm of error). From my testing this does not seem to be a problem for APRS at all.
 
