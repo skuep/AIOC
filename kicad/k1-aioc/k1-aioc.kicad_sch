@@ -6,7 +6,7 @@
 
   (title_block
     (title "All-In-One-Cable (AIOC)")
-    (rev "1.1")
+    (rev "1.2")
   )
 
   (lib_symbols
