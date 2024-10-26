@@ -16,6 +16,8 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 [![All In One Cable AIOC - Ham Nuggets Season 4 Episode 8 S04E08](http://img.youtube.com/vi/RZjoPNe634o/0.jpg)](http://www.youtube.com/watch?v=RZjoPNe634o "All In One Cable AIOC - Ham Nuggets Season 4 Episode 8 S04E08")
 [![Your BAOFENG Programming Cable Sucks! - Get This! - AIOC All in One Cable](http://img.youtube.com/vi/xRCmXQYRLE0/0.jpg)](http://www.youtube.com/watch?v=xRCmXQYRLE0 "Your BAOFENG Programming Cable Sucks! - Get This! - AIOC All in One Cable")
 
+There is also a German 4-part article with instructions [here](https://dl-nordwest.com/index.php/2024/07/21/aioc-der-wunderadapter-fuer-handfunkgeraete-teil-1-einfuehrung-und-bestellung/).
+
 ## Features ##
 - Cheap & Hackable Digital mode USB interface (similar to digirig, mobilinkd, etc...)
 - Programming Cable Function via virtual Serial Port
