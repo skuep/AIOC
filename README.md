@@ -71,10 +71,11 @@ J2,D3,D4,R17 designators don't exist in the CPL file.
 
 __Note__ for people doing their own PCB production: I suggest using the LCSC part numbers in the BOM file as a guide on what to buy (especially regarding the MCU).
 
-__Note__ the current hardware version is **1.0**, but there is a pre-release **1.1** available [here](https://github.com/skuep/AIOC/tree/k1-aioc-rev1.1) that features
+__Note__ the current hardware version is **1.0**, but there is a pre-release **1.2** in the making [here](https://github.com/skuep/AIOC/pull/93) that features
 - support for an external hardware input (e.g. for COS)
 - a split pad for the PTT/UART contact, so in case you would like to use the AIOC hardware for another purpose than a K1-style connector, you can separate these two signals that are otherwise connected to the same TRS contact.
-
+- Adjustable input and output audio levels (line-level, mic-level)
+  
 ## How To Assemble
 This is the process I use for building. See photographs in ``images`` folder.
 - You need to use **Monacor** ``PG-204P`` and ``PG-203P`` or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection). **Adafruit** products ``1800`` and ``1798`` are confirmed to work as well.
