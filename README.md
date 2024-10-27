@@ -3,6 +3,8 @@
 [![](https://img.shields.io/github/v/release/skuep/AIOC?sort=semver)](https://github.com/skuep/AIOC/releases)
 [![](https://img.shields.io/github/license/skuep/AIOC)](https://github.com/skuep/AIOC/blob/master/LICENSE.md)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F2F415AKJV)
+
 # AIOC
 This is the Ham Radio *All-in-one-Cable*. **It is currently still being tested!** Please read this README carefully before ordering anything.
 
