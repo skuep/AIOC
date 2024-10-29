@@ -158,6 +158,22 @@ While they are annoying, they are safe to ignore and require changes in the upst
   [...]
   ````
 
+## Notes on the setup for AllStarLink (ASL3)
+Once your cable is emulating a CM108, it becomes quite simple to plug into your HT and setup a simple simplex AllStarLink node that talks to your favorite repeater or node.
+
+In `asl-menu`, set:
+- Device type: `usbradio` (menu sections: 2 > A1 > N4 > I2)
+- Duplex type: `1` (menu sections: 2 > A1 > N5)
+
+Edit `usbradio.conf` (menu sections: 6 > H)
+- `rxboost = 0`
+- `rxsqhyst = 500`
+- `carrierfrom = usbinvert`
+- `ctcssfrom = no`
+- `rxdemod = speaker`
+- `txprelim = no` 
+
+
 ## Notes on APRSdroid
 APRSdroid support has been added by AIOC by implementing support for the fixed 22050 Hz sample rate that APRSdroid requires. 
 It is important to notice, that the exact sample rate can not be achieved by the hardware, due to the 8 MHz crystal. 
