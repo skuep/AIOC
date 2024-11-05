@@ -165,13 +165,14 @@ In `asl-menu`, set:
 - Device type: `usbradio` (menu sections: 2 > A1 > N4 > I2)
 - Duplex type: `1` (menu sections: 2 > A1 > N5)
 
-Edit `usbradio.conf` (menu sections: 6 > H)
+Edit `usbradio.conf` (menu sections: 6 > H) (for a Puxing PX-888 cheap Chineese HT)
 - `rxboost = 0`
 - `rxsqhyst = 500`
 - `carrierfrom = usbinvert`
 - `ctcssfrom = no`
 - `rxdemod = speaker`
-- `txprelim = no` 
+- `txprelim = no`
+- `invertptt = no`
 
 
 ## Notes on APRSdroid
