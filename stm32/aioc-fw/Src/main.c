@@ -100,7 +100,7 @@ static void SystemReset(void) {
 #endif
     }
 
-    if (resetFlags & RCC_CSR_IWDGRSTF) {
+    if (resetFlags & RCC_CSR_WWDGRSTF) {
 #if defined(SYSTEM_MEMORY_BASE)
         /* Reset cause was watchdog, which is used for rebooting into the bootloader.
            Set stack pointer to *SYSTEM_MEMORY_BASE
@@ -189,6 +189,17 @@ int main(void)
 
     USB_Init();
 
+    /* Enable indepedent watchdog to reset on lockup*/
+    IWDG_HandleTypeDef IWDGHandle = {
+        .Instance = IWDG,
+        .Init = {
+            .Prescaler = IWDG_PRESCALER_8,
+            .Reload = 0x0FFF,
+            .Window = 0x0FFF
+        }
+    };
+    HAL_IWDG_Init(&IWDGHandle);
+
     uint32_t i = 0;
     while (1) {
         USB_Task();
@@ -206,6 +217,8 @@ int main(void)
                     fb.feedbackMin, fb.feedbackMax, fb.feedbackAvg);
 #endif
         }
+
+        HAL_IWDG_Refresh(&IWDGHandle);
     }
 
   return 0;
