@@ -5,6 +5,7 @@
 #include "tusb.h"
 #include "usb.h"
 #include "cos.h"
+#include "audio_dsp.h"
 #include <math.h>
 
 /* The one and only supported sample rate */
@@ -16,17 +17,31 @@
 /* This is the amount of buffer level to feedback coupling with a denominator of 65536 to prevent buffer drift */
 #define SPEAKER_BUFLVL_FB_COUPLING 1
 /* We try to stay on this target with the buffer level */
-#define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB and maximum sample rate */
+#define SPEAKER_BUFFERLVL_TARGET (10 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 10 frames, i.e. 10ms at full-speed USB and maximum sample rate */
+/* DMA buffer length for ADC */
+#define ADC_BUFFER_LEN          256
+/* DMA buffer length for DAC */
+#define DAC_BUFFER_LEN          256
+/* DAC clock divider 72MHz/150 = 480Ksps */
+#define DAC_CLOCK_DIVIDER       150
 
+/* ADC DSP variables */
+static uint16_t ADC_samples[ADC_BUFFER_LEN];
+static rational_decimator_t adc_resampler;
+/* ADC DAC variables */
+static uint16_t DAC_samples[DAC_BUFFER_LEN];
+static rational_interpolator_t dac_resampler;
 
 typedef enum {
+    SAMPLERATE_96000,
     SAMPLERATE_48000, /* The high-quality default */
+    SAMPLERATE_44010,
     SAMPLERATE_32000, /* For completeness sake, support 32 kHz as well */
     SAMPLERATE_24000, /* Just half of 48 kHz */
-    SAMPLERATE_22050, /* For APRSdroid support. NOTE: Has approx. 90 ppm of clock frequency error (ca. 22052 Hz) */
+    SAMPLERATE_22050, /* For APRSdroid support */
     SAMPLERATE_16000, /* On ARM platforms, direwolf will by default, divide configured sample rate by 3, thus support 16 kHz */
     SAMPLERATE_12000, /* Just a quarter of 48 kHz */
-    SAMPLERATE_11025, /* NOTE: Has approx. 90 ppm of clock frequency error (ca. 11026 Hz) */
+    SAMPLERATE_11025,
     SAMPLERATE_8000,
     SAMPLERATE_COUNT /* Has to be last element */
 } samplerate_t;
@@ -60,7 +75,9 @@ static volatile state_t speakerState = STATE_OFF;
 static audio_control_range_4_n_t(SAMPLERATE_COUNT) sampleFreqRng = {
     .wNumSubRanges = SAMPLERATE_COUNT,
     .subrange = {
+        [SAMPLERATE_96000] = {.bMin = 96000, .bMax = 96000, .bRes = 0},
         [SAMPLERATE_48000] = {.bMin = 48000, .bMax = 48000, .bRes = 0},
+        [SAMPLERATE_44010] = {.bMin = 44010, .bMax = 44010, .bRes = 0},
         [SAMPLERATE_32000] = {.bMin = 32000, .bMax = 32000, .bRes = 0},
         [SAMPLERATE_24000] = {.bMin = 24000, .bMax = 24000, .bRes = 0},
         [SAMPLERATE_22050] = {.bMin = 22050, .bMax = 22050, .bRes = 0},
@@ -72,11 +89,21 @@ static audio_control_range_4_n_t(SAMPLERATE_COUNT) sampleFreqRng = {
 };
 
 /* Prototypes of static functions */
-static void Timer_ADC_Init(void);
 static void Timer_DAC_Init(void);
 static void ADC_Init(void);
 static void DAC_Init(void);
 static void Timeout_Timers_Init(void);
+
+/* ADC clock functions */
+static uint32_t ADC_get_sample_rate() {
+    return HAL_RCC_GetSysClockFreq() / 2 / 15;
+}
+/* DAC clock functions */
+static uint32_t DAC_get_sample_rate() {
+    /* Calculate clock rate divider for requested sample rate with rounding */
+    uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK1Freq()) ? HAL_RCC_GetPCLK1Freq() : 2 * HAL_RCC_GetPCLK1Freq();
+    return timerFreq / DAC_CLOCK_DIVIDER;
+}
 
 //--------------------------------------------------------------------+
 // Application Callback API Implementations
@@ -194,7 +221,10 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
             microphoneSampleFreq = ((audio_control_cur_4_t*) pBuff)->bCur;
             TU_LOG2("    Set Mic. Sample Freq: %lu\r\n", microphoneSampleFreq);
 
-            Timer_ADC_Init();
+
+            rational_decimator_reset(&adc_resampler);
+            rational_decimator_set_rate(&adc_resampler, ADC_get_sample_rate(), microphoneSampleFreq);
+            microphoneSampleFreqCfg = microphoneSampleFreq;
 
             /* Update debug register */
             settingsRegMap[SETTINGS_REG_INFO_AUDIO2] = (((uint32_t) microphoneSampleFreqCfg) << SETTINGS_REG_INFO_AUDIO2_RECRATE_OFFS) & SETTINGS_REG_INFO_AUDIO2_RECRATE_MASK;
@@ -228,7 +258,10 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
             speakerSampleFreq = ((audio_control_cur_4_t*) pBuff)->bCur;
             TU_LOG2("    Set Spk. Sample Freq: %lu\r\n", speakerSampleFreq);
 
-            Timer_DAC_Init();
+            rational_interpolator_reset(&dac_resampler);
+            rational_interpolator_set_rate(&dac_resampler, speakerSampleFreq, DAC_get_sample_rate());
+            /* With rational resampler it is exact*/
+            speakerSampleFreqCfg = speakerSampleFreq;
 
             /* Update debug register */
             settingsRegMap[SETTINGS_REG_INFO_AUDIO8] = (((uint32_t) speakerSampleFreqCfg) << SETTINGS_REG_INFO_AUDIO8_PLAYRATE_OFFS) & SETTINGS_REG_INFO_AUDIO8_PLAYRATE_MASK;
@@ -516,7 +549,8 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
 
     if (microphoneState == STATE_START) {
         /* Start ADC sampling as soon as device stacks starts loading data (will be a ZLP for first frame) */
-        NVIC_EnableIRQ(ADC1_2_IRQn);
+        rational_decimator_reset(&adc_resampler);
+        NVIC_EnableIRQ(DMA2_Channel1_IRQn);
         microphoneState = STATE_RUN;
 
         /* Update debug register */
@@ -541,7 +575,8 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
         if (count >= SPEAKER_BUFFERLVL_TARGET) {
             /* Wait until whe are at buffer target fill level, then start DAC output */
             speakerState = STATE_RUN;
-            NVIC_EnableIRQ(TIM6_DAC1_IRQn);
+            rational_interpolator_reset(&dac_resampler);
+            NVIC_EnableIRQ(DMA1_Channel3_IRQn);
 
             /* Update debug register */
             settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_MASK)
@@ -617,7 +652,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
     switch (itf) {
     case ITF_NUM_AUDIO_STREAMING_IN:
         /* Microphone channel has been stopped */
-        NVIC_DisableIRQ(ADC1_2_IRQn);
+        NVIC_DisableIRQ(DMA2_Channel1_IRQn);
         microphoneState = STATE_OFF;
 
         /* Update debug register */
@@ -627,7 +662,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
 
     case ITF_NUM_AUDIO_STREAMING_OUT:
         /* Speaker channel has been stopped */
-        NVIC_DisableIRQ(TIM6_DAC1_IRQn);
+        NVIC_DisableIRQ(DMA1_Channel3_IRQn);
         speakerState = STATE_OFF;
 
         /* Update debug register */
@@ -716,58 +751,29 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     settingsRegMap[SETTINGS_REG_INFO_AUDIO15] = ((uint32_t) speakerFeedbackMax         << SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_OFFS) & SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_MASK;
 }
 
-void ADC1_2_IRQHandler (void)
+uint32_t DAC_get_next_sample(void)
 {
-    if (ADC2->ISR & ADC_ISR_EOS) {
-        ADC2->ISR = ADC_ISR_EOS;
-        /* Get ADC sample */
-        int16_t sample = ((int32_t) ADC2->DR - 32768) & 0xFFFFU;
+    int16_t sample = 0x0000;
 
-        /* Automatic COS */
-        uint16_t cosThreshold = (settingsRegMap[SETTINGS_REG_VCOS_LVLCTRL] & SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_OFFS;
+    /* Read from FIFO, leave sample at 0 if fifo empty */
+    tud_audio_read(&sample, sizeof(sample));
 
-        if (!microphoneMute[1] && ( (sample > cosThreshold) || (sample < -cosThreshold) )) {
-            /* Reset timeout and make sure timer is enabled */
-            TIM17->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
-        }
+    /* Automatic PTT */
+    uint16_t pttThreshold = (settingsRegMap[SETTINGS_REG_VPTT_LVLCTRL] & SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_OFFS;
 
-        /* Get volume */
-        uint16_t volume = !microphoneMute[1] ? microphoneLinVolume[1] : 0;
-
-        /* Scale with 16-bit unsigned volume and round */
-        sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
-
-        /* Store in FIFO */
-        tud_audio_write (&sample, sizeof(sample));
+    if (!speakerMute[1] && ( (sample > pttThreshold) || (sample < -pttThreshold) )) {
+        /* Reset timeout and make sure timer is enabled */
+        TIM16->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
     }
-}
 
-void TIM6_DAC_IRQHandler(void)
-{
-    if (TIM6->SR & TIM_SR_UIF) {
-        TIM6->SR = (uint32_t) ~TIM_SR_UIF;
-        int16_t sample = 0x0000;
+    /* Get volume */
+    uint16_t volume = !speakerMute[1] ? speakerLinVolume[1] : 0;
 
-        /* Read from FIFO, leave sample at 0 if fifo empty */
-        tud_audio_read(&sample, sizeof(sample));
+    /* Scale with 16-bit unsigned volume and round */
+    sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
 
-        /* Automatic PTT */
-        uint16_t pttThreshold = (settingsRegMap[SETTINGS_REG_VPTT_LVLCTRL] & SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_OFFS;
-
-        if (!speakerMute[1] && ( (sample > pttThreshold) || (sample < -pttThreshold) )) {
-            /* Reset timeout and make sure timer is enabled */
-            TIM16->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
-        }
-
-        /* Get volume */
-        uint16_t volume = !speakerMute[1] ? speakerLinVolume[1] : 0;
-
-        /* Scale with 16-bit unsigned volume and round */
-        sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
-
-        /* Load DAC holding register with sample */
-        DAC1->DHR12L1 = ((int32_t) sample + 32768) & 0xFFFFU;
-    }
+    /* Load DAC holding register with sample */
+    return ((int32_t) sample + 32768) & 0xFFFFU;
 }
 
 void TIM16_IRQHandler(void)
@@ -871,42 +877,8 @@ static void GPIO_Init(void)
     HAL_GPIO_Init(GPIOA, &DACOutGpio);
 }
 
-static void Timer_ADC_Init(void)
-{
-	/* Calculate clock rate divider for requested sample rate with rounding */
-	uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK1Freq()) ? HAL_RCC_GetPCLK1Freq() : 2 * HAL_RCC_GetPCLK1Freq();
-	uint32_t rateDivider = (timerFreq + microphoneSampleFreq / 2) / microphoneSampleFreq;
-
-	/* Store actually realized samplerate */
-	microphoneSampleFreqCfg = timerFreq / rateDivider;
-
-	/* Enable clock and (re-) initialize timer */
-    __HAL_RCC_TIM3_CLK_ENABLE();
-
-    /* TIM3_TRGO triggers ADC2 */
-    TIM3->CR1 &= ~TIM_CR1_CEN;
-    TIM3->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
-    TIM3->CR2 = TIM_TRGO_UPDATE;
-    TIM3->PSC = 0;
-    TIM3->ARR = rateDivider - 1;
-    TIM3->EGR = TIM_EGR_UG;
-#if 1 /* Output sample rate on compare channel 3 */
-    TIM3->CCMR2 =  TIM_OCMODE_PWM1 | TIM_CCMR2_OC3PE;
-    TIM3->CCER = (0 << TIM_CCER_CC3P_Pos) | TIM_CCER_CC3E;
-    TIM3->CCR3 = rateDivider/2 - 1;
-#endif
-    TIM3->CR1 |= TIM_CR1_CEN;
-}
-
 static void Timer_DAC_Init(void)
 {
-    /* Calculate clock rate divider for requested sample rate with rounding */
-    uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK1Freq()) ? HAL_RCC_GetPCLK1Freq() : 2 * HAL_RCC_GetPCLK1Freq();
-    uint32_t rateDivider = (timerFreq + speakerSampleFreq / 2) / speakerSampleFreq;
-
-    /* Store actually realized samplerate for feedback algorithm to use */
-    speakerSampleFreqCfg = timerFreq / rateDivider;
-
     /* Enable clock and (re-) initialize timer */
     __HAL_RCC_TIM6_CLK_ENABLE();
 
@@ -915,28 +887,80 @@ static void Timer_DAC_Init(void)
     TIM6->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP | TIM_AUTORELOAD_PRELOAD_ENABLE;
     TIM6->CR2 = TIM_TRGO_UPDATE;
     TIM6->PSC = 0;
-    TIM6->ARR = rateDivider - 1;
+    TIM6->ARR = DAC_CLOCK_DIVIDER - 1;
     TIM6->EGR = TIM_EGR_UG;
 
-    TIM6->DIER = TIM_DIER_UIE;
     TIM6->CR1 |= TIM_CR1_CEN;
+}
 
-    NVIC_SetPriority(TIM6_DAC1_IRQn, AIOC_IRQ_PRIO_AUDIO);
+static void ADC_process_samples(uint16_t* buf) {
+    uint32_t samples = rational_decimator_process_block_u16(&adc_resampler, buf, ADC_BUFFER_LEN/2);
+    uint32_t* output_buffer = rational_decimator_get_outputs(&adc_resampler);
+
+    for(int i = 0;i < samples;i++) {
+        /* Get ADC sample */
+        int32_t scaled_sample = rational_decimator_scale(&adc_resampler, output_buffer[i] * 16);
+        int16_t sample = (scaled_sample - 32768) & 0xFFFFU;
+
+        /* Automatic COS */
+        uint16_t cosThreshold = (settingsRegMap[SETTINGS_REG_VCOS_LVLCTRL] & SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_OFFS;
+
+        if (!microphoneMute[1] && ( (sample > cosThreshold) || (sample < -cosThreshold) )) {
+            /* Reset timeout and make sure timer is enabled */
+            TIM17->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
+        }
+
+        /* Get volume */
+        uint16_t volume = !microphoneMute[1] ? microphoneLinVolume[1] : 0;
+
+        /* Scale with 16-bit unsigned volume and round */
+        sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
+
+        /* Store in FIFO */
+        tud_audio_write (&sample, sizeof(sample));
+    }
+}
+
+void DMA2_Channel1_IRQHandler(void) {
+    /* Half buffer interrupt, process first half */
+    if(DMA2->ISR & DMA_ISR_HTIF1) {
+        DMA2->IFCR = DMA_IFCR_CHTIF1;
+        ADC_process_samples(ADC_samples);
+    }
+    /* Full buffer interrupt, process second half */
+    if(DMA2->ISR & DMA_ISR_TCIF1) {
+        DMA2->IFCR = DMA_IFCR_CTCIF1;
+        ADC_process_samples(&ADC_samples[ADC_BUFFER_LEN/2]);
+    }
+    /* DMA Error, reinit ADC */
+    if(DMA2->ISR & DMA_ISR_TEIF1) {
+        DMA2->IFCR = DMA_IFCR_CTEIF1;
+        DAC_Init();
+    }
 }
 
 static void ADC_Init(void)
 {
+
+    /* Set ADC clock divisor */
+    RCC->CFGR2 |= RCC_CFGR2_ADCPRE12_DIV2;
+
+    for (uint32_t i=0; i<100; i++) {
+        asm volatile ("nop");
+    }
+
     __HAL_RCC_ADC2_CLK_ENABLE();
+    __HAL_RCC_DMA2_CLK_ENABLE();
 
     ADC2->CR = 0x00 << ADC_CR_ADVREGEN_Pos;
     ADC2->CR = 0x01 << ADC_CR_ADVREGEN_Pos;
 
-    for (uint32_t i=0; i<200; i++) {
+    for (uint32_t i=0; i<720; i++) {
         asm volatile ("nop");
     }
 
     /* Select AHB clock */
-    ADC12_COMMON->CCR = (0x1 << ADC12_CCR_CKMODE_Pos) | (0x00 << ADC12_CCR_MULTI_Pos);
+    ADC12_COMMON->CCR = (0 << ADC12_CCR_CKMODE_Pos) | (0x00 << ADC12_CCR_MULTI_Pos);
 
     ADC2->CR |= ADC_CR_ADCAL;
 
@@ -949,30 +973,118 @@ static void ADC_Init(void)
     while (!(ADC2->ISR & ADC_ISR_ADRDY))
         ;
 
-    /* External Trigger on TIM3_TRGO, left aligned data with 12 bit resolution */
-    ADC2->CFGR = (0x01 << ADC_CFGR_EXTEN_Pos)  | (0x04 << ADC_CFGR_EXTSEL_Pos) | (ADC_CFGR_ALIGN) | (0x00 << ADC_CFGR_RES_Pos);
+    /* Disable DMA */
+    DMA2_Channel1->CCR &= ~DMA_CCR_EN;
 
-    /* Maximum sample time of 601.5 cycles for channel 12. */
-    ADC2->SMPR2 = 0x7 << ADC_SMPR2_SMP12_Pos;
+    /* Enable peripheral to memory from ADC2 */
+    DMA2_Channel1->CCR = (0x3 << DMA_CCR_PL_Pos)/* High priority */
+                       | (0x1 << DMA_CCR_MSIZE_Pos) /* 16 bits */
+                       | (0x1 << DMA_CCR_PSIZE_Pos) /* 16 bits */
+                       | (DMA_CCR_MINC) /* Memory increment mode */
+                       | (DMA_CCR_CIRC) /* Circular mode */
+                       | (DMA_CCR_TEIE) /* Enable error interrupt */
+                       | (DMA_CCR_HTIE) /* Enable half buffer interrupt */
+                       | (DMA_CCR_TCIE); /* Enable full buffer interrupt */
+
+    /* Buffer length */
+    DMA2_Channel1->CNDTR = ADC_BUFFER_LEN;
+
+    /* ADC conversion result source */
+    DMA2_Channel1->CPAR = (uint32_t)&ADC2->DR;
+
+    /* Buffer as destination */
+    DMA2_Channel1->CMAR = (uint32_t)ADC_samples;
+
+    /* Enable DMA */
+    DMA2_Channel1->CCR |= DMA_CCR_EN;
+
+    /* Left align, Continuous mode, DMA Circular Mode, DMA Enabled */
+    ADC2->CFGR = ADC_CFGR_CONT | ADC_CFGR_DMACFG | ADC_CFGR_DMAEN;
+
+    /* Maximum sample time of 2.5 cycles for channel 12 */
+    ADC2->SMPR2 = 0x1 << ADC_SMPR2_SMP12_Pos;
 
     /* Sample only channel 12 in a regular sequence */
     ADC2->SQR1 = (12 << ADC_SQR1_SQ1_Pos) | (0 << ADC_SQR1_L_Pos);
 
-    /* Enable Interrupt Request */
-    ADC2->IER = ADC_IER_EOSIE;
-
     /* Start ADC */
     ADC2->CR |= ADC_CR_ADSTART;
 
-    NVIC_SetPriority(ADC1_2_IRQn, AIOC_IRQ_PRIO_AUDIO);
+    NVIC_SetPriority(DMA2_Channel1_IRQn, AIOC_IRQ_PRIO_AUDIO);
+}
+
+void DAC_process_samples(uint16_t* samples) {
+    rational_interpolator_fill_buffer(&dac_resampler, samples, DAC_BUFFER_LEN/2);
+}
+
+void DMA1_Channel3_IRQHandler(void) {
+    /* Half buffer interrupt, fill first half */
+    if(DMA1->ISR & DMA_ISR_HTIF3) {
+        DMA1->IFCR = DMA_IFCR_CHTIF3;
+        DAC_process_samples(DAC_samples);
+    }
+    /* Full buffer interrupt, fill second half */
+    if(DMA1->ISR & DMA_ISR_TCIF3) {
+        DMA1->IFCR = DMA_IFCR_CTCIF3;
+        DAC_process_samples(&DAC_samples[DAC_BUFFER_LEN/2]);
+    }
+    /* DMA Error, reinit ADC */
+    if(DMA1->ISR & DMA_ISR_TEIF3) {
+        DMA1->IFCR = DMA_IFCR_CTEIF3;
+        DAC_Init();
+    }
+}
+
+void TIM6_DAC_IRQHandler(void) {
+    /* DMA Error, reinit ADC */
+    if (DAC->SR & DAC_SR_DMAUDR1) {
+        DAC->SR |= DAC_SR_DMAUDR1;
+        DAC_Init();
+    }
 }
 
 static void DAC_Init(void)
 {
     __HAL_RCC_DAC1_CLK_ENABLE();
+    __HAL_RCC_DMA1_CLK_ENABLE();
+
+    /* Remap DAC DMA to channel 1 to not conflict with ADC */
+    SYSCFG->CFGR1 |= SYSCFG_CFGR1_TIM6DAC1Ch1_DMA_RMP;
+
+    /* Disable DMA */
+    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
+
+    /* Enable peripheral to memory from ADC2 */
+    DMA1_Channel3->CCR = (0x3 << DMA_CCR_PL_Pos)/* High priority */
+                       | (0x1 << DMA_CCR_MSIZE_Pos) /* 16 bits */
+                       | (0x1 << DMA_CCR_PSIZE_Pos) /* 16 bits */
+                       | (DMA_CCR_DIR) /* Memory to Peripheral */
+                       | (DMA_CCR_MINC) /* Memory increment mode */
+                       | (DMA_CCR_CIRC) /* Circular mode */
+                       | (DMA_CCR_TEIE) /* Enable error interrupt */
+                       | (DMA_CCR_HTIE) /* Enable half buffer interrupt */
+                       | (DMA_CCR_TCIE); /* Enable full buffer interrupt */
+
+    /* Buffer length */
+    DMA1_Channel3->CNDTR = DAC_BUFFER_LEN;
+
+    /* DAC left aligned as destination */
+    DMA1_Channel3->CPAR = (uint32_t)&DAC->DHR12L1;
+
+    /* Buffer as source */
+    DMA1_Channel3->CMAR = (uint32_t)DAC_samples;
+
+    /* Enable DMA */
+    DMA1_Channel3->CCR |= DMA_CCR_EN;
 
     /* Select TIM6 TRGO as trigger and enable DAC */
-    DAC->CR = (0x0 << DAC_CR_TSEL1_Pos) | DAC_CR_TEN1 | DAC_CR_EN1;
+    DAC->CR = DAC_CR_DMAUDRIE1 /* Underflow enable */
+            | DAC_CR_DMAEN1 /* DMA enable */
+            | (0x0 << DAC_CR_TSEL1_Pos) | DAC_CR_TEN1 | DAC_CR_EN1;
+
+    NVIC_SetPriority(DMA1_Channel3_IRQn, AIOC_IRQ_PRIO_AUDIO);
+    NVIC_EnableIRQ(TIM6_DAC_IRQn);
+    NVIC_SetPriority(TIM6_DAC_IRQn, AIOC_IRQ_PRIO_SYSTICK);
 }
 
 static void Timeout_Timers_Init()
@@ -1005,7 +1117,10 @@ static void Timeout_Timers_Init()
 void USB_AudioInit(void)
 {
     GPIO_Init();
-    Timer_ADC_Init();
+    rational_decimator_init(&adc_resampler);
+    rational_decimator_set_rate(&adc_resampler, ADC_get_sample_rate(), DEFAULT_SAMPLE_RATE);
+    rational_interpolator_init(&dac_resampler);
+    rational_interpolator_set_rate(&dac_resampler, DEFAULT_SAMPLE_RATE, DAC_get_sample_rate());
     Timer_DAC_Init();
     ADC_Init();
     DAC_Init();
