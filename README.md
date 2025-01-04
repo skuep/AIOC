@@ -31,6 +31,7 @@ There is also a German 4-part article with instructions [here](https://dl-nordwe
 ## Compatibility
 ### Software
   - [Direwolf](#notes-on-direwolf) as AX.25 modem/APRS en+decoder/...
+  - [AllStarLink](#notes-on-allstarlink-asl3) as ASL Node
   - [APRSdroid](#notes-on-aprsdroid) as APRS en+decoder
   - [CHIRP](#notes-on-chirp) for programming
   - [VaraFM](#notes-on-varafm)
@@ -158,7 +159,7 @@ While they are annoying, they are safe to ignore and require changes in the upst
   [...]
   ````
 
-## Notes on the setup for AllStarLink (ASL3)
+## Notes on AllStarLink (ASL3)
 Once your cable is emulating a CM108, it becomes quite simple to plug into your HT and setup a simple simplex AllStarLink node that talks to your favorite repeater or node.
 
 In `asl-menu`, set:
