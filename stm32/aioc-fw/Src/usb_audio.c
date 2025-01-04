@@ -519,7 +519,17 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
 
     if (microphoneState == STATE_START) {
         /* Start ADC sampling as soon as device stacks starts loading data (will be a ZLP for first frame) */
-        RX_Config(USB_AUDIO_RXGAIN_1X);
+        uint8_t rxGainSetting = (settingsRegMap[SETTINGS_REG_AUDIO_RX] & SETTINGS_REG_AUDIO_RX_RXGAIN_MASK) >> SETTINGS_REG_AUDIO_RX_RXGAIN_OFFS;
+        usb_audio_rxgain_t rxGain =
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_1X_ENUM) ? USB_AUDIO_RXGAIN_1X :
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_2X_ENUM) ? USB_AUDIO_RXGAIN_2X :
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_4X_ENUM) ? USB_AUDIO_RXGAIN_4X :
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_8X_ENUM) ? USB_AUDIO_RXGAIN_8X :
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_16X_ENUM) ? USB_AUDIO_RXGAIN_16X :
+                USB_AUDIO_RXGAIN_1X;
+
+        RX_Config(rxGain);
+
         NVIC_EnableIRQ(ADC1_2_IRQn);
         microphoneState = STATE_RUN;
 
@@ -545,7 +555,7 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
         if (count >= SPEAKER_BUFFERLVL_TARGET) {
             /* Wait until we are at buffer target fill level, then start DAC output */
             speakerState = STATE_RUN;
-            TX_Config(USB_AUDIO_TXBOOST_OFF);
+            TX_Config((settingsRegMap[SETTINGS_REG_AUDIO_TX] & SETTINGS_REG_AUDIO_TX_TXBOOST_MASK) ? USB_AUDIO_TXBOOST_ON : USB_AUDIO_TXBOOST_OFF);
             NVIC_EnableIRQ(TIM6_DAC1_IRQn);
 
             /* Update debug register */
