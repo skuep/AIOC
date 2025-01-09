@@ -19,6 +19,8 @@
 
 #define USB_RESET_DELAY     100 /* ms */
 
+#define unused(x) ((void)(x))
+
 static void SystemClock_Config(void)
 {
     HAL_StatusTypeDef status;
@@ -74,6 +76,9 @@ static void SystemClock_Config(void)
 
     HAL_GPIO_Init(GPIOA, &GpioInit);
     HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_PLLCLK_DIV2, RCC_MCODIV_1);
+
+    /* Get rid of unused variable errors in release mode */
+    unused(status);
 }
 
 static void SystemReset(void) {
