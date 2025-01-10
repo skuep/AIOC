@@ -5,10 +5,10 @@
 # usage: Edit "VARIABLES"-section to suit project requirements.
 #        For debug build:
 #          cmake -DCMAKE_TOOLCHAIN_FILE=cubeide-gcc.cmake  -S ./ -B Debug -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
-#          make -C Debug VERBOSE=1 -j
+#          make -C Debug VERBOSE=1 -j $(nproc)
 #        For release build:
 #          cmake -DCMAKE_TOOLCHAIN_FILE=cubeide-gcc.cmake  -S ./ -B Release -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
-#          make -C Release VERBOSE=1 -j
+#          make -C Release VERBOSE=1 -j $(nproc)
 #############################################################################################################################
 cmake_minimum_required(VERSION 3.20)
 
