@@ -91,6 +91,7 @@ void fox_hunt_task(void) {
 	if ((settingsRegMap[SETTINGS_REG_FOX_INTERVAL] != 0) &&
 		(seconds_passed++ > settingsRegMap[SETTINGS_REG_FOX_INTERVAL]) &&
 		(identifying == 0)) {
+
 		seconds_passed = 0;
 		IO_PTTAssert(IO_PTT_MASK_PTT1);
 		/* Make sure the TIM6 IRQ is enabled (it won't be if there's no USB audio) */
