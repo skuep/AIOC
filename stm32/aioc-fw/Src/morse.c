@@ -285,7 +285,8 @@ void set_timings(char *msg, uint8_t timings[], uint8_t *timings_length) {
 			break;
 		}
 
-		/* If this letter isn't a space, the next letter isn't a space, and we're not at the end: add the LETTER_GAP */
+		/* If this letter isn't a space, the next letter isn't a space, and we're not
+         * at the end: add the LETTER_GAP */
 		if ((letter != ' ') && (msg[msg_i + 1] != ' ') && (msg[msg_i + 1] != '\0')) {
 			ADD_TIMING(LETTER_GAP);
 		}
