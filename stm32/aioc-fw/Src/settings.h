@@ -230,6 +230,20 @@ extern uint32_t settingsRegMap[SETTINGS_REGMAP_SIZE];
 #define SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_OFFS              0
 #define SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_MASK              0x0000FFFFUL
 
+/* Fox Hunt settings */
+#define SETTINGS_REG_FOX_INTERVAL							0xA4
+#define SETTINGS_REG_FOX_INTERVAL_DEFAULT					0
+/* ID is up to 16 bytes so this uses 4 registers */
+#define SETTINGS_REG_FOX_ID0								0xA5
+#define SETTINGS_REG_FOX_ID0_DEFAULT						0
+#define SETTINGS_REG_FOX_ID1								0xA6
+#define SETTINGS_REG_FOX_ID1_DEFAULT						0
+#define SETTINGS_REG_FOX_ID2								0xA7
+#define SETTINGS_REG_FOX_ID2_DEFAULT						0
+#define SETTINGS_REG_FOX_ID3								0xA8
+#define SETTINGS_REG_FOX_ID3_DEFAULT						0
+
+
 /* AIOC debug register 0 */
 #define SETTINGS_REG_INFO_AIOC0                             0xC0
 #define SETTINGS_REG_INFO_AIOC0_DEFAULT                     0
@@ -356,7 +370,6 @@ extern uint32_t settingsRegMap[SETTINGS_REGMAP_SIZE];
 /* Maximum UAC2.0 Feedback Value since last playback */
 #define SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_OFFS            0
 #define SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_MASK            0xFFFFFFFFUL
-
 
 
 void Settings_Init();
