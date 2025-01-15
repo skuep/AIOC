@@ -198,11 +198,10 @@ endif()
 
 add_compile_definitions (${PROJECT_DEFINES})
 include_directories (${PROJECT_INCLUDES})
+target_link_libraries(${PROJECT_NAME} m)
 
 set (CMAKE_EXECUTABLE_SUFFIX ".elf")
 set (CMAKE_STATIC_LIBRARY_SUFFIX ".a")
-# Removed ${RUNTIME_LIBRARY} from CMAKE_C_FLAGS
-set (CMAKE_C_FLAGS "${MCPU} -std=gnu11 ${MFPU} ${MFLOAT_ABI} -mthumb -Wall -Werror")
-# Removed ${RUNTIME_LIBRARY_SYSCALLS} from CMAKE_EXE_LINKER_FLAGS
-set (CMAKE_EXE_LINKER_FLAGS "-T${LINKER_SCRIPT} -Wl,-Map=test.map -Wl,--gc-sections -static -Wl,--start-group -lc -lm -Wl,--end-group")
+set (CMAKE_C_FLAGS "${MCPU} ${RUNTIME_LIBRARY} -std=gnu11 ${MFPU} ${MFLOAT_ABI} -mthumb -Wall -Werror")
+set (CMAKE_EXE_LINKER_FLAGS "-T${LINKER_SCRIPT} ${RUNTIME_LIBRARY_SYSCALLS} -Wl,-Map=test.map -Wl,--gc-sections -static -Wl,--start-group -lc -lm -Wl,--end-group")
 set (CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS} -x assembler-with-cpp")
