@@ -178,6 +178,26 @@ extern uint32_t settingsRegMap[SETTINGS_REGMAP_SIZE];
 #define SETTINGS_REG_SERIAL_IOMUX3_BRKSRC_IN2_MASK          SETTINGS_REG_SERIAL_IOMUX0_DCDSRC_IN2_MASK
 #define SETTINGS_REG_SERIAL_IOMUX3_BRKSRC_VCOS_MASK         SETTINGS_REG_SERIAL_IOMUX0_DCDSRC_VCOS_MASK
 
+/* Audio RX settings register */
+#define SETTINGS_REG_AUDIO_RX                               0x72
+#define SETTINGS_REG_AUDIO_RX_DEFAULT                       SETTINGS_REG_AUDIO_RX_RXGAIN_DFLT
+/* RXGAIN: Sets the RX gain of the audio input. Requires HW version >= 1.2 */
+#define SETTINGS_REG_AUDIO_RX_RXGAIN_DFLT                   SETTINGS_REG_AUDIO_RX_RXGAIN_1X_ENUM
+#define SETTINGS_REG_AUDIO_RX_RXGAIN_OFFS                   16
+#define SETTINGS_REG_AUDIO_RX_RXGAIN_MASK                   0x000F0000UL
+#define SETTINGS_REG_AUDIO_RX_RXGAIN_1X_ENUM                0x0
+#define SETTINGS_REG_AUDIO_RX_RXGAIN_2X_ENUM                0x1
+#define SETTINGS_REG_AUDIO_RX_RXGAIN_4X_ENUM                0x2
+#define SETTINGS_REG_AUDIO_RX_RXGAIN_8X_ENUM                0x3
+#define SETTINGS_REG_AUDIO_RX_RXGAIN_16X_ENUM               0x4
+
+/* Audio TX settings register */
+#define SETTINGS_REG_AUDIO_TX                               0x78
+#define SETTINGS_REG_AUDIO_TX_DEFAULT                       0
+/* TXBOOST: Defines the audio output level. Either MIC level or LINE level (boosted). Requires HW version >= 1.2 */
+#define SETTINGS_REG_AUDIO_TX_TXBOOST_OFFS                  8
+#define SETTINGS_REG_AUDIO_TX_TXBOOST_MASK                  (1UL << SETTINGS_REG_AUDIO_TX_TXBOOST_OFFS)
+
 /* Virtual PTT level control register */
 #define SETTINGS_REG_VPTT_LVLCTRL                           0x82
 #define SETTINGS_REG_VPTT_LVLCTRL_DEFAULT                   (SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_DFLT)

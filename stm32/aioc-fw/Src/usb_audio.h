@@ -3,6 +3,19 @@
 
 #include <stdint.h>
 
+typedef enum {
+    USB_AUDIO_RXGAIN_1X,
+    USB_AUDIO_RXGAIN_2X,
+    USB_AUDIO_RXGAIN_4X,
+    USB_AUDIO_RXGAIN_8X,
+    USB_AUDIO_RXGAIN_16X,
+} usb_audio_rxgain_t;
+
+typedef enum {
+    USB_AUDIO_TXBOOST_OFF,
+    USB_AUDIO_TXBOOST_ON
+} usb_audio_txboost_t;
+
 typedef struct {
     uint16_t bufLevelMin;
     uint16_t bufLevelMax;
