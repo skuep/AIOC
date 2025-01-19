@@ -106,7 +106,7 @@ The following steps are required for initial programming of the AIOC:
 - Connect USB-C cable to the AIOC PCB
 - Use a tool like ``dfu-util`` to program the firmware binary from the GitHub Releases page like this:
   ````
-  dfu-util -a 0 -s 0x08000000 -D aioc-fw-x-y-z.bin
+  dfu-util -a 0 -s 0x08000000:leave -D aioc-fw-x-y-z.bin
   ````
   __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb is installed on your system).
   On Linux (and MacOS), your user either needs to have the permission to use libusb (``plugdev`` group) or you might need to use ``sudo``.
