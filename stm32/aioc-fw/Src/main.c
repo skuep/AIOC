@@ -3,6 +3,7 @@
 #include "settings.h"
 #include "led.h"
 #include "usb.h"
+#include "fox_hunt.h"
 #include <assert.h>
 #include <io.h>
 #include <stdio.h>
@@ -189,6 +190,8 @@ int main(void)
 
     USB_Init();
 
+    fox_hunt_init();
+
     /* Enable indepedent watchdog to reset on lockup*/
     IWDG_HandleTypeDef IWDGHandle = {
         .Instance = IWDG,
@@ -262,5 +265,8 @@ void PendSV_Handler(void) {
 
 void SysTick_Handler(void) {
     HAL_IncTick();
+    if ((uwTick % 1000) == 0) { /* call fox_hunt_task() once per second */
+    	fox_hunt_task();
+    }
 }
 
