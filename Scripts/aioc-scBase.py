@@ -80,6 +80,7 @@ print(f'Product: {aioc.product}')
 print(f'Serial No: {aioc.serial}')
 print(f'Magic: {magic}')
 
+# Set the needed section to True to run, remember to Store settings into flash part to save to the device
 if False:
     # Load the hardware defaults
     print(f'Loading Defaults...')
