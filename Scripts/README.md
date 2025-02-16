@@ -17,15 +17,15 @@ dfu-util -d 1209:7388 -a 0 -s 0x08000000:leave -D aioc-fw-1.3.0.bin
 ````
 You may have to follow the initual programming instructions including shorting the outermost pins and run this instead: dfu-util -a 0 -s 0x08000000:leave -D aioc-fw-1.3.0.bin
 
-4)Download the needed script and update if necessary
+4)Download the needed script and update if necessary, this gets the base script for editing and the virtual PTT enable script
 ````
-wget script base
-wget script
+wget https://github.com/guywire/AIOC/blob/master/Scripts/aioc-scBase.py
+wget https://github.com/guywire/AIOC/blob/master/Scripts/aioc-scVPTT.py
 ````
 
-5) run the script
+5) run the script, this one enables virtual PTT
 ````
-sudo python (your script).py
+sudo python aioc-scVPTT.py
 ````
 
 6) unplug the AIOC and try it out
