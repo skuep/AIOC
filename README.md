@@ -58,7 +58,8 @@ There is also a German 4-part article with instructions [here](https://dl-nordwe
   - Click "Add BOM File" and upload ``BOM-k1-aioc.csv``
   - Click "Add CPL File" and upload ``CPL-k1-aioc.csv``
   - Press Next
-  - Look Through components, see if something is missing or problematic and press Next
+  - Look Through components, see if something is missing or problematic
+  - **Make sure that all listed components are selected** and press Next 
   - Check everything looks roughly good (rotations are already baked-in and should be correct). Save to Cart
 
 This gives you 5 (or more) SMD assembled AIOC. The only thing left to do is soldering on the TRS connectors (see [here](#how-to-assemble)).
