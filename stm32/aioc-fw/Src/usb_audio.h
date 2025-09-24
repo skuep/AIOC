@@ -19,4 +19,6 @@ void USB_AudioInit(void);
 void USB_AudioGetSpeakerFeedbackStats(usb_audio_fbstats_t * status);
 void USB_AudioGetSpeakerBufferStats(usb_audio_bufstats_t * status);
 
+uint32_t DAC_get_next_sample(void);
+
 #endif /* USB_AUDIO_H_ */
