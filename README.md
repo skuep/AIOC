@@ -147,6 +147,9 @@ Since firmware version 1.2.0, a CM108 style PTT interface is available for publi
 Direwolf on Linux is confirmed working, please report any issues. Note that currently, Direwolf reports some warnings when using the CM108 PTT interface on the AIOC. 
 While they are annoying, they are safe to ignore and require changes in the upstream direwolf sourcecode. See https://github.com/wb2osz/direwolf/issues/448 for more details.
 
+**For advanced use of the AIOC, refer to this pinout image.**
+![](doc/images/k1-aioc-pinout.svg)
+
 ## Notes on Direwolf
 - Follow the regular setup guide with [Direwolf](https://github.com/wb2osz/direwolf) to determine the correct audio device to use. 
   For the serial and CM108 PTT interfaces on Linux, you need to set correct permissions on the ttyACM/hidraw devices. Consult Direwolf manual.
