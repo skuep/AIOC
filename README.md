@@ -74,9 +74,10 @@ J2,D3,D4,R17 designators don't exist in the CPL file.
 
 __Note__ for people doing their own PCB production: I suggest using the LCSC part numbers in the BOM file as a guide on what to buy (especially regarding the MCU).
 
-__Note__ the current hardware version is **1.0**, but there is a version **1.2** currently in the making [here](https://github.com/skuep/AIOC/pull/93) that will feature
-- support for an external hardware input (e.g. for COS)
-- a split pad for the PTT/UART contact, so in case you would like to use the AIOC hardware for another purpose than a K1-style connector, you can separate these two signals that are otherwise connected to the same TRS contact.
+__Note__ As of 2025-09-25, the current hardware version is **1.2**. The minimum firmware version for this hardware version is 1.4.0. 
+The following features have been added.
+- Support for an external hardware input (e.g. for COS)
+- A split pad for the PTT/UART contact, so in case you would like to use the AIOC hardware for another purpose than a K1-style connector, you can separate these two signals that are otherwise connected to the same TRS contact.
 - Adjustable input and output audio levels (line-level, mic-level)
   
 ## How To Assemble
