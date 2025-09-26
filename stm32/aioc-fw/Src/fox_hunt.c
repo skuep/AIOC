@@ -3,6 +3,7 @@
 #include "morse.h"
 
 #define FOXHUNT_SAMPLEFREQ      48000
+#define FOXHUNT_VOLUME          32768
 
 uint8_t identifying = 0;
 uint8_t seconds_passed = 0;
@@ -14,14 +15,14 @@ uint8_t timings[FOXHUNT_MAX_TIMINGS];
 
 /* 750 Hz sine wave at 48000 Hz sample rate and 16 bits/sample */
 #define NS 64
-uint16_t sin_wave[NS] = {
-		32768, 36030, 39260, 42426, 45496, 48439, 51226, 53830, 56225, 58386,
-		60293, 61926, 63270, 64310, 65037, 65443, 65525, 65281, 64713, 63829,
-		62635, 61145, 59373, 57336, 55055, 52553, 49854, 46985, 43975, 40853,
-		37651, 34401, 31134, 27884, 24682, 21560, 18550, 15681, 12982, 10480,
-		8199, 6162, 4390, 2900, 1706, 822, 254, 10, 92, 498,
-		1225, 2265, 3609, 5242, 7149, 9310, 11705, 14309, 17096, 20039,
-		23109, 26275, 29505, 32767,
+int16_t sin_wave[NS] = {
+        0,  3252,  6482,  9658, 12728, 15671, 18458, 21062, 23457, 25618,
+    27525, 29158, 30502, 31542, 32269, 32675, 32757, 32513, 31945, 31061,
+    29867, 28377, 26605, 24568, 22287, 19785, 17086, 14217, 11207,  8085,
+     4883,  2173,   -434, -3884, -6886, -10108, -13118, -15987, -18686, -21188,
+   -24569, -26606, -28378, -29868, -31062, -31946, -32514, -32758, -32676, -32270,
+   -31543, -30503, -29159, -27526, -25619, -23458, -21063, -18459, -15672, -12729,
+    -9659, -6483, -3253,     -1
 };
 uint8_t sample_index = 0;
 
@@ -94,46 +95,6 @@ void FoxHunt_Init(void) {
 	}
 }
 
-/* Returns non-zero if we actually pushed output to the DAC */
-uint8_t fox_hunt_output(void) {
-	/* Default to no audio output */
-	uint16_t sample = 0;
-
-	if (identifying) {
-		/* If the key is down, pull samples from our sine waveform */
-		if (key_on) {
-			sample = sin_wave[sample_index++];
-			if (sample_index == NS) {
-				sample_index = 0;
-			}
-		}
-
-		/* output the sample to the DAC (the TIM15 IRQ will trigger it) */
-		DAC1->DHR12L1 = sample;
-
-		/* state machine for morse output
-		 * we ssume that we alternate between a sine wave and silence
-		 * timings[] has the amount of time we spend for each element
-		 */
-		cycles_remaining--;
-		if (cycles_remaining == 0) {
-			timings_index++;
-			if (timings_index == timings_length) {
-				/* All done IDing */
-				identifying = 0;
-				IO_PTTDeassert(IO_PTT_MASK_PTT1);
-			} else {
-				/* Move on to the next timing */
-				cycles_remaining = timings[timings_index] * DIT_CYCLES;
-				/* if we were silent start making noise, if we were making noise be silent */
-				key_on = key_on == 0 ? 1 : 0;
-			}
-		}
-		return 1;
-	}
-	return 0;
-}
-
 void FoxHunt_Tick(void) {
 	if ((settingsRegMap[SETTINGS_REG_FOX_INTERVAL] != 0) &&
 		(seconds_passed++ > settingsRegMap[SETTINGS_REG_FOX_INTERVAL]) &&
@@ -155,29 +116,43 @@ void TIM15_IRQHandler(void)
     if (TIM15->SR & TIM_SR_UIF) {
         TIM15->SR = (uint32_t) ~TIM_SR_UIF;
 
-        if (fox_hunt_output() != 0)
-            return;
-
-
         int16_t sample = 0x0000;
-#if 0
-        /* Read from FIFO, leave sample at 0 if fifo empty */
-        tud_audio_read(&sample, sizeof(sample));
 
-        /* Automatic PTT */
-        uint16_t pttThreshold = (settingsRegMap[SETTINGS_REG_VPTT_LVLCTRL] & SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_OFFS;
+        if (identifying) {
+            /* If the key is down, pull samples from our sine waveform */
+            if (key_on) {
+                sample = sin_wave[sample_index++];
+                if (sample_index == NS) {
+                    sample_index = 0;
+                }
+            }
 
-        if (!speakerMute[1] && ( (sample > pttThreshold) || (sample < -pttThreshold) )) {
-            /* Reset timeout and make sure timer is enabled */
-            TIM16->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
+            /* state machine for morse output
+             * we ssume that we alternate between a sine wave and silence
+             * timings[] has the amount of time we spend for each element
+             */
+            cycles_remaining--;
+            if (cycles_remaining == 0) {
+                timings_index++;
+                if (timings_index == timings_length) {
+                    /* All done IDing */
+                    identifying = 0;
+                    IO_PTTDeassert(IO_PTT_MASK_PTT1);
+                } else {
+                    /* Move on to the next timing */
+                    cycles_remaining = timings[timings_index] * DIT_CYCLES;
+                    /* if we were silent start making noise, if we were making noise be silent */
+                    key_on = key_on == 0 ? 1 : 0;
+                }
+            }
         }
 
         /* Get volume */
-        uint16_t volume = !speakerMute[1] ? speakerLinVolume[1] : 0;
+        uint16_t volume = FOXHUNT_VOLUME;
 
         /* Scale with 16-bit unsigned volume and round */
         sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
-#endif
+
         /* Load DAC holding register with sample */
         DAC1->DHR12L1 = ((int32_t) sample + 32768) & 0xFFFFU;
 
