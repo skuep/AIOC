@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include "usb_descriptors.h"
 
+
+#define SETTINGS_GET(REG, FIELD) ((settingsRegMap[REG] & (REG##_##FIELD##_##MASK)) >> (REG##_##FIELD##_##OFFS))
+
 #define SETTINGS_REGMAP_SIZE     256
 #define SETTINGS_REGMAP_READONLYADDR 0xC0
 
@@ -230,19 +233,69 @@ extern uint32_t settingsRegMap[SETTINGS_REGMAP_SIZE];
 #define SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_OFFS              0
 #define SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_MASK              0x0000FFFFUL
 
-/* Fox Hunt settings */
-#define SETTINGS_REG_FOX_INTERVAL							0xA4
-#define SETTINGS_REG_FOX_INTERVAL_DEFAULT					0
-/* ID is up to 16 bytes so this uses 4 registers */
-#define SETTINGS_REG_FOX_ID0								0xA5
-#define SETTINGS_REG_FOX_ID0_DEFAULT						0
-#define SETTINGS_REG_FOX_ID1								0xA6
-#define SETTINGS_REG_FOX_ID1_DEFAULT						0
-#define SETTINGS_REG_FOX_ID2								0xA7
-#define SETTINGS_REG_FOX_ID2_DEFAULT						0
-#define SETTINGS_REG_FOX_ID3								0xA8
-#define SETTINGS_REG_FOX_ID3_DEFAULT						0
+/* Fox Hunt settings register */
+#define SETTINGS_REG_FOXHUNT_CTRL                           0xA0
+#define SETTINGS_REG_FOXHUNT_CTRL_DEFAULT                   (SETTINGS_REG_FOXHUNT_CTRL_INTERVAL_DFLT | SETTINGS_REG_FOXHUNT_CTRL_WPM_DFLT | SETTINGS_REG_FOXHUNT_CTRL_VOLUME_DFLT)
+/* INTERVAL: Beacon interval in seconds */
+#define SETTINGS_REG_FOXHUNT_CTRL_INTERVAL_DFLT             ((uint32_t) 0 << SETTINGS_REG_FOXHUNT_CTRL_INTERVAL_OFFS)
+#define SETTINGS_REG_FOXHUNT_CTRL_INTERVAL_OFFS             0
+#define SETTINGS_REG_FOXHUNT_CTRL_INTERVAL_MASK             0x000000FFUL
+/* WPM: Words per Minute morse speed */
+#define SETTINGS_REG_FOXHUNT_CTRL_WPM_DFLT                  ((uint32_t) 20 << SETTINGS_REG_FOXHUNT_CTRL_WPM_OFFS)
+#define SETTINGS_REG_FOXHUNT_CTRL_WPM_OFFS                  8
+#define SETTINGS_REG_FOXHUNT_CTRL_WPM_MASK                  0x0000FF00UL
+/* VOLUME: Transmit volume */
+#define SETTINGS_REG_FOXHUNT_CTRL_VOLUME_DFLT               ((uint32_t) 32768 << SETTINGS_REG_FOXHUNT_CTRL_VOLUME_OFFS)
+#define SETTINGS_REG_FOXHUNT_CTRL_VOLUME_OFFS               16
+#define SETTINGS_REG_FOXHUNT_CTRL_VOLUME_MASK               0xFFFF0000UL
 
+/* Fox Hunt message 0 register */
+#define SETTINGS_REG_FOXHUNT_MSG0                           0xA2
+#define SETTINGS_REG_FOXHUNT_MSG0_DEFAULT                   0
+#define SETTINGS_REG_FOXHUNT_MSG0_CHAR00_OFFS               0
+#define SETTINGS_REG_FOXHUNT_MSG0_CHAR00_MASK               0x000000FFUL
+#define SETTINGS_REG_FOXHUNT_MSG0_CHAR01_OFFS               8
+#define SETTINGS_REG_FOXHUNT_MSG0_CHAR01_MASK               0x0000FF00UL
+#define SETTINGS_REG_FOXHUNT_MSG0_CHAR02_OFFS               16
+#define SETTINGS_REG_FOXHUNT_MSG0_CHAR02_MASK               0x00FF0000UL
+#define SETTINGS_REG_FOXHUNT_MSG0_CHAR03_OFFS               24
+#define SETTINGS_REG_FOXHUNT_MSG0_CHAR03_MASK               0xFF000000UL
+
+/* Fox Hunt message 1 register */
+#define SETTINGS_REG_FOXHUNT_MSG1                           0xA3
+#define SETTINGS_REG_FOXHUNT_MSG1_DEFAULT                   0
+#define SETTINGS_REG_FOXHUNT_MSG1_CHAR04_OFFS               0
+#define SETTINGS_REG_FOXHUNT_MSG1_CHAR04_MASK               0x000000FFUL
+#define SETTINGS_REG_FOXHUNT_MSG1_CHAR05_OFFS               8
+#define SETTINGS_REG_FOXHUNT_MSG1_CHAR05_MASK               0x0000FF00UL
+#define SETTINGS_REG_FOXHUNT_MSG1_CHAR06_OFFS               16
+#define SETTINGS_REG_FOXHUNT_MSG1_CHAR06_MASK               0x00FF0000UL
+#define SETTINGS_REG_FOXHUNT_MSG1_CHAR07_OFFS               24
+#define SETTINGS_REG_FOXHUNT_MSG1_CHAR07_MASK               0xFF000000UL
+
+/* Fox Hunt message 2 register */
+#define SETTINGS_REG_FOXHUNT_MSG2                           0xA4
+#define SETTINGS_REG_FOXHUNT_MSG2_DEFAULT                   0
+#define SETTINGS_REG_FOXHUNT_MSG2_CHAR08_OFFS               0
+#define SETTINGS_REG_FOXHUNT_MSG2_CHAR08_MASK               0x000000FFUL
+#define SETTINGS_REG_FOXHUNT_MSG2_CHAR09_OFFS               8
+#define SETTINGS_REG_FOXHUNT_MSG2_CHAR09_MASK               0x0000FF00UL
+#define SETTINGS_REG_FOXHUNT_MSG2_CHAR10_OFFS               16
+#define SETTINGS_REG_FOXHUNT_MSG2_CHAR10_MASK               0x00FF0000UL
+#define SETTINGS_REG_FOXHUNT_MSG2_CHAR11_OFFS               24
+#define SETTINGS_REG_FOXHUNT_MSG2_CHAR11_MASK               0xFF000000UL
+
+/* Fox Hunt message 3 register */
+#define SETTINGS_REG_FOXHUNT_MSG3                           0xA5
+#define SETTINGS_REG_FOXHUNT_MSG3_DEFAULT                   0
+#define SETTINGS_REG_FOXHUNT_MSG3_CHAR12_OFFS               0
+#define SETTINGS_REG_FOXHUNT_MSG3_CHAR12_MASK               0x000000FFUL
+#define SETTINGS_REG_FOXHUNT_MSG3_CHAR13_OFFS               8
+#define SETTINGS_REG_FOXHUNT_MSG3_CHAR13_MASK               0x0000FF00UL
+#define SETTINGS_REG_FOXHUNT_MSG3_CHAR14_OFFS               16
+#define SETTINGS_REG_FOXHUNT_MSG3_CHAR14_MASK               0x00FF0000UL
+#define SETTINGS_REG_FOXHUNT_MSG3_CHAR15_OFFS               24
+#define SETTINGS_REG_FOXHUNT_MSG3_CHAR15_MASK               0xFF000000UL
 
 /* AIOC debug register 0 */
 #define SETTINGS_REG_INFO_AIOC0                             0xC0

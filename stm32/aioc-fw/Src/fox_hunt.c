@@ -3,9 +3,7 @@
 #include "morse.h"
 
 #define FOXHUNT_SAMPLERATE      48000
-#define FOXHUNT_VOLUME          32768
 #define FOXHUNT_CARRIERLUT_SIZE (sizeof(carrierLUT)/sizeof(*carrierLUT))
-#define FOXHUNT_WPM             20
 
 static uint8_t isIdentifying = 0;
 static uint8_t secondsPassed = 0;
@@ -65,29 +63,29 @@ static void DAC_Init(void)
 }
 
 void FoxHunt_Init(void) {
-	char messageBuffer[FOXHUNT_MAX_CHARS];
-
-	/* Read the ID from the settings registers */
-	messageBuffer[0]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 0;
-	messageBuffer[1]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 8;
-	messageBuffer[2]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 16;
-	messageBuffer[3]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 24;
-	messageBuffer[4]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 0;
-	messageBuffer[5]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 8;
-	messageBuffer[6]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 16;
-	messageBuffer[7]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 24;
-	messageBuffer[8]  = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 0;
-	messageBuffer[9]  = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 8;
-	messageBuffer[10] = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 16;
-	messageBuffer[11] = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 24;
-	messageBuffer[12] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 0;
-	messageBuffer[13] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 8;
-	messageBuffer[14] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 16;
-	messageBuffer[15] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 24;
+	char messageBuffer[FOXHUNT_MAX_CHARS] = {
+        /* Read the ID from the settings registers */
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG0, CHAR00),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG0, CHAR01),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG0, CHAR02),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG0, CHAR03),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG1, CHAR04),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG1, CHAR05),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG1, CHAR06),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG1, CHAR07),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG2, CHAR08),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG2, CHAR09),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG2, CHAR10),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG2, CHAR11),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG3, CHAR12),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG3, CHAR13),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG3, CHAR14),
+        SETTINGS_GET(SETTINGS_REG_FOXHUNT_MSG3, CHAR15),
+	};
 
 	timingsLength = Morse_GenerateTimings(messageBuffer, FOXHUNT_MAX_CHARS, timingsLUT, FOXHUNT_MAX_TIMINGS);
 
-	if (settingsRegMap[SETTINGS_REG_FOX_INTERVAL] != 0) {
+	if (SETTINGS_GET(SETTINGS_REG_FOXHUNT_CTRL, INTERVAL) != 0) {
         /* Set up the DAC and timer. Note, this needs to happen after the "regular" USB Audio Subsystem Init,
          * to overwrite their DAC configuration for our purpose here. */
         Timer_DAC_Init();
@@ -99,8 +97,10 @@ void FoxHunt_Init(void) {
 }
 
 void FoxHunt_Tick(void) {
-	if ((settingsRegMap[SETTINGS_REG_FOX_INTERVAL] != 0) &&
-		(secondsPassed++ > settingsRegMap[SETTINGS_REG_FOX_INTERVAL]) &&
+    secondsPassed++;
+
+	if ((SETTINGS_GET(SETTINGS_REG_FOXHUNT_CTRL, INTERVAL) != 0) &&
+		(secondsPassed >= SETTINGS_GET(SETTINGS_REG_FOXHUNT_CTRL, INTERVAL)) &&
 		(isIdentifying == 0)) {
 
 		secondsPassed = 0;
@@ -108,7 +108,7 @@ void FoxHunt_Tick(void) {
 
 		isIdentifying = 1;
 		timingsIndex = 0;
-		remainingCycles = timingsLUT[timingsIndex] * ((uint32_t) (MORSE_UNIT_LENGTH * FOXHUNT_SAMPLERATE) / FOXHUNT_WPM);
+		remainingCycles = timingsLUT[timingsIndex] * ((uint32_t) (MORSE_UNIT_LENGTH * FOXHUNT_SAMPLERATE) / SETTINGS_GET(SETTINGS_REG_FOXHUNT_CTRL, WPM));
 		isKeying = 0;
 	}
 }
@@ -142,7 +142,7 @@ void TIM15_IRQHandler(void)
                     IO_PTTDeassert(IO_PTT_MASK_PTT1);
                 } else {
                     /* Move on to the next timing */
-                    remainingCycles = timingsLUT[timingsIndex] * ((uint32_t) (MORSE_UNIT_LENGTH * FOXHUNT_SAMPLERATE) / FOXHUNT_WPM);
+                    remainingCycles = timingsLUT[timingsIndex] * ((uint32_t) (MORSE_UNIT_LENGTH * FOXHUNT_SAMPLERATE) / SETTINGS_GET(SETTINGS_REG_FOXHUNT_CTRL, WPM));
                     /* if we were silent start making noise, if we were making noise be silent */
                     isKeying = isKeying == 0 ? 1 : 0;
                 }
@@ -150,7 +150,7 @@ void TIM15_IRQHandler(void)
         }
 
         /* Get volume */
-        uint16_t volume = FOXHUNT_VOLUME;
+        uint16_t volume = SETTINGS_GET(SETTINGS_REG_FOXHUNT_CTRL, VOLUME);
 
         /* Scale with 16-bit unsigned volume and round */
         sample = (int16_t) (((int32_t) sample * volume + (sample > 0 ? 32768 : -32768)) / 65536);
