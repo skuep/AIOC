@@ -7,7 +7,6 @@
 #define FOXHUNT_CARRIERLUT_SIZE (sizeof(carrierLUT)/sizeof(*carrierLUT))
 #define FOXHUNT_WPM             20
 
-
 static uint8_t isIdentifying = 0;
 static uint8_t secondsPassed = 0;
 static uint8_t isKeying = 0;
@@ -66,27 +65,27 @@ static void DAC_Init(void)
 }
 
 void FoxHunt_Init(void) {
-	char id[FOXHUNT_MAX_CHARS];
+	char messageBuffer[FOXHUNT_MAX_CHARS];
 
 	/* Read the ID from the settings registers */
-	id[0]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 0;
-	id[1]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 8;
-	id[2]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 16;
-	id[3]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 24;
-	id[4]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 0;
-	id[5]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 8;
-	id[6]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 16;
-	id[7]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 24;
-	id[8]  = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 0;
-	id[9]  = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 8;
-	id[10] = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 16;
-	id[11] = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 24;
-	id[12] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 0;
-	id[13] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 8;
-	id[14] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 16;
-	id[15] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 24;
+	messageBuffer[0]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 0;
+	messageBuffer[1]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 8;
+	messageBuffer[2]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 16;
+	messageBuffer[3]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 24;
+	messageBuffer[4]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 0;
+	messageBuffer[5]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 8;
+	messageBuffer[6]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 16;
+	messageBuffer[7]  = settingsRegMap[SETTINGS_REG_FOX_ID1] >> 24;
+	messageBuffer[8]  = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 0;
+	messageBuffer[9]  = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 8;
+	messageBuffer[10] = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 16;
+	messageBuffer[11] = settingsRegMap[SETTINGS_REG_FOX_ID2] >> 24;
+	messageBuffer[12] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 0;
+	messageBuffer[13] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 8;
+	messageBuffer[14] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 16;
+	messageBuffer[15] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 24;
 
-	Morse_GenerateTimings(id, timingsLUT, &timingsLength);
+	timingsLength = Morse_GenerateTimings(messageBuffer, FOXHUNT_MAX_CHARS, timingsLUT, FOXHUNT_MAX_TIMINGS);
 
 	if (settingsRegMap[SETTINGS_REG_FOX_INTERVAL] != 0) {
         /* Set up the DAC and timer. Note, this needs to happen after the "regular" USB Audio Subsystem Init,

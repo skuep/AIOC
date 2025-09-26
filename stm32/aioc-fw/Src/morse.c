@@ -1,28 +1,27 @@
 #include "morse.h"
-#include "fox_hunt.h"
 #include "settings.h"
 
 /* convenience macro for calling add_timing() */
-#define ADD_TIMING(X) add_timing(timings, timings_length, (X))
+#define ADD_TIMING(X) timingsIndex = (timingsIndex < timingsLUTSize) ? \
+        timingsIndex + addTiming(timingsLUT, timingsIndex, (X)) : 0
 
-void add_timing(uint8_t timings[], uint8_t *timings_length, uint8_t value) {
+static uint8_t addTiming(uint8_t * timingsLUT, uint16_t timingsIndex, uint8_t value) {
 	/* prevent the timings array from overflowing */
-	if (*timings_length >= FOXHUNT_MAX_TIMINGS) {
-		return;
-	}
-	timings[(*timings_length)++] = value;
+    timingsLUT[timingsIndex] = value;
+	return 1;
 }
 
-void Morse_GenerateTimings(char *msg, uint8_t timings[], uint8_t *timings_length) {
+uint16_t Morse_GenerateTimings(char * messageBuffer, uint8_t messageBufferSize, uint8_t * timingsLUT, uint16_t timingsLUTSize)
+{
 	char letter;
 
-	*timings_length = 0;
+	uint16_t timingsIndex = 0;
 
-	ADD_TIMING(MORSE_WORD_GAP); /* Give the PTT some time to work */
+	ADD_TIMING(MORSE_HEAD); /* Give the PTT some time to work */
 
 	/* Go through the message letter by letter and set the appropriate timings */
-	for (uint8_t msg_i = 0; ((msg_i < FOXHUNT_MAX_CHARS) && (msg[msg_i] != '\0')); msg_i++) {
-		letter = msg[msg_i];
+	for (uint8_t msg_i = 0; ((msg_i < messageBufferSize) && (messageBuffer[msg_i] != '\0')); msg_i++) {
+		letter = messageBuffer[msg_i];
 
 		/* if it's lower case, make it upper case */
 		if ((letter >= 'a') && (letter <= 'z')) {
@@ -287,8 +286,10 @@ void Morse_GenerateTimings(char *msg, uint8_t timings[], uint8_t *timings_length
 
 		/* If this letter isn't a space, the next letter isn't a space, and we're not
          * at the end: add the LETTER_GAP */
-		if ((letter != ' ') && (msg[msg_i + 1] != ' ') && (msg[msg_i + 1] != '\0')) {
+		if ((letter != ' ') && (messageBuffer[msg_i + 1] != ' ') && (messageBuffer[msg_i + 1] != '\0')) {
 			ADD_TIMING(MORSE_LETTER_GAP);
 		}
 	}
+
+	return timingsIndex;
 }
