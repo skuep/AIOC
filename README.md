@@ -79,6 +79,7 @@ The following features have been added.
 - Support for an external hardware input (e.g. for COS)
 - A split pad for the PTT/UART contact, so in case you would like to use the AIOC hardware for another purpose than a K1-style connector, you can separate these two signals that are otherwise connected to the same TRS contact.
 - Adjustable input and output audio levels (line-level, mic-level)
+- A fox hunt mode, where the AIOC operates as a simple morse code beacon
   
 ## How To Assemble
 This is the process I use for building. See photographs in ``images`` folder.
@@ -146,6 +147,9 @@ The soundcard interface of the AIOC gives access to the audio data channels. It 
 Since firmware version 1.2.0, a CM108 style PTT interface is available for public testing. This interface works in parallel to the COM-port PTT.
 Direwolf on Linux is confirmed working, please report any issues. Note that currently, Direwolf reports some warnings when using the CM108 PTT interface on the AIOC. 
 While they are annoying, they are safe to ignore and require changes in the upstream direwolf sourcecode. See https://github.com/wb2osz/direwolf/issues/448 for more details.
+
+Since firmware version 1.3.0, a HID interface is also available, that allows reconfiguration of the AIOC from the PC. There are code snippets in the Release Notes for various features.
+There is also a command-line utility by Hrafnkell Eiríksson available [here](https://github.com/hrafnkelle/aioc-util).
 
 **For advanced use of the AIOC, refer to this pinout image.**
 ![](doc/images/k1-aioc-pinout.svg)
