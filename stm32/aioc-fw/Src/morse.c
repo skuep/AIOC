@@ -21,7 +21,7 @@ void set_timings(char *msg, uint8_t timings[], uint8_t *timings_length) {
 	ADD_TIMING(WORD_GAP); /* Give the PTT some time to work */
 
 	/* Go through the message letter by letter and set the appropriate timings */
-	for (uint8_t msg_i = 0; ((msg_i < FOXHUNT_MAX_ID) && (msg[msg_i] != '\0')); msg_i++) {
+	for (uint8_t msg_i = 0; ((msg_i < FOXHUNT_MAX_CHARS) && (msg[msg_i] != '\0')); msg_i++) {
 		letter = msg[msg_i];
 
 		/* if it's lower case, make it upper case */

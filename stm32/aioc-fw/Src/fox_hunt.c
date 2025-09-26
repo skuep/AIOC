@@ -2,20 +2,21 @@
 #include "fox_hunt.h"
 #include "morse.h"
 
-#define FOXHUNT_SAMPLEFREQ      48000
+#define FOXHUNT_SAMPLERATE      48000
 #define FOXHUNT_VOLUME          32768
+#define FOXHUNT_CARRIERLUT_SIZE (sizeof(carrierLUT)/sizeof(*carrierLUT))
 
-uint8_t identifying = 0;
-uint8_t seconds_passed = 0;
-uint8_t key_on = 0;
-uint16_t cycles_remaining;
-uint8_t timings_length;
-uint8_t timings_index = 0;
-uint8_t timings[FOXHUNT_MAX_TIMINGS];
+static uint8_t isIdentifying = 0;
+static uint8_t secondsPassed = 0;
+static uint8_t isKeying = 0;
+static uint16_t remainingCycles;
+static uint8_t timingsLength;
+static uint8_t timingsIndex = 0;
+static uint8_t timingsLUT[FOXHUNT_MAX_TIMINGS];
+static uint8_t sampleIndex = 0;
 
 /* 750 Hz sine wave at 48000 Hz sample rate and 16 bits/sample */
-#define NS 64
-int16_t sin_wave[NS] = {
+static int16_t carrierLUT[] = {
         0,  3252,  6482,  9658, 12728, 15671, 18458, 21062, 23457, 25618,
     27525, 29158, 30502, 31542, 32269, 32675, 32757, 32513, 31945, 31061,
     29867, 28377, 26605, 24568, 22287, 19785, 17086, 14217, 11207,  8085,
@@ -24,13 +25,12 @@ int16_t sin_wave[NS] = {
    -31543, -30503, -29159, -27526, -25619, -23458, -21063, -18459, -15672, -12729,
     -9659, -6483, -3253,     -1
 };
-uint8_t sample_index = 0;
 
 static void Timer_DAC_Init(void)
 {
     /* Calculate clock rate divider for requested sample rate with rounding */
     uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK2Freq()) ? HAL_RCC_GetPCLK2Freq() : 2 * HAL_RCC_GetPCLK2Freq();
-    uint32_t rateDivider = (timerFreq + FOXHUNT_SAMPLEFREQ / 2) / FOXHUNT_SAMPLEFREQ;
+    uint32_t rateDivider = (timerFreq + FOXHUNT_SAMPLERATE / 2) / FOXHUNT_SAMPLERATE;
 
     /* Enable clock and (re-) initialize timer */
     __HAL_RCC_TIM15_CLK_ENABLE();
@@ -64,8 +64,7 @@ static void DAC_Init(void)
 }
 
 void FoxHunt_Init(void) {
-    /* TODO: Move this into a state machine into Tick. e.g. if !initialized and interval > 0 -> initialize */
-	char id[FOXHUNT_MAX_ID];
+	char id[FOXHUNT_MAX_CHARS];
 
 	/* Read the ID from the settings registers */
 	id[0]  = settingsRegMap[SETTINGS_REG_FOX_ID0] >> 0;
@@ -85,29 +84,31 @@ void FoxHunt_Init(void) {
 	id[14] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 16;
 	id[15] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 24;
 
-	set_timings(id, timings, &timings_length);
+	set_timings(id, timingsLUT, &timingsLength);
 
 	if (settingsRegMap[SETTINGS_REG_FOX_INTERVAL] != 0) {
         /* Set up the DAC and timer. Note, this needs to happen after the "regular" USB Audio Subsystem Init,
          * to overwrite their DAC configuration for our purpose here. */
         Timer_DAC_Init();
         DAC_Init();
+
+        /* Make sure the TIM15 IRQ is enabled */
+        NVIC_EnableIRQ(TIM15_IRQn);
 	}
 }
 
 void FoxHunt_Tick(void) {
 	if ((settingsRegMap[SETTINGS_REG_FOX_INTERVAL] != 0) &&
-		(seconds_passed++ > settingsRegMap[SETTINGS_REG_FOX_INTERVAL]) &&
-		(identifying == 0)) {
+		(secondsPassed++ > settingsRegMap[SETTINGS_REG_FOX_INTERVAL]) &&
+		(isIdentifying == 0)) {
 
-		seconds_passed = 0;
+		secondsPassed = 0;
 		IO_PTTAssert(IO_PTT_MASK_PTT1);
-		/* Make sure the TIM15 IRQ is enabled (it won't be if there's no USB audio) */
-		NVIC_EnableIRQ(TIM15_IRQn);
-		identifying = 1;
-		timings_index = 0;
-		cycles_remaining = timings[timings_index] * DIT_CYCLES;
-		key_on = 0;
+
+		isIdentifying = 1;
+		timingsIndex = 0;
+		remainingCycles = timingsLUT[timingsIndex] * (uint16_t) (DIT_CYCLES * FOXHUNT_SAMPLERATE);
+		isKeying = 0;
 	}
 }
 
@@ -118,12 +119,12 @@ void TIM15_IRQHandler(void)
 
         int16_t sample = 0x0000;
 
-        if (identifying) {
+        if (isIdentifying) {
             /* If the key is down, pull samples from our sine waveform */
-            if (key_on) {
-                sample = sin_wave[sample_index++];
-                if (sample_index == NS) {
-                    sample_index = 0;
+            if (isKeying) {
+                sample = carrierLUT[sampleIndex++];
+                if (sampleIndex == FOXHUNT_CARRIERLUT_SIZE) {
+                    sampleIndex = 0;
                 }
             }
 
@@ -131,18 +132,18 @@ void TIM15_IRQHandler(void)
              * we ssume that we alternate between a sine wave and silence
              * timings[] has the amount of time we spend for each element
              */
-            cycles_remaining--;
-            if (cycles_remaining == 0) {
-                timings_index++;
-                if (timings_index == timings_length) {
+            remainingCycles--;
+            if (remainingCycles == 0) {
+                timingsIndex++;
+                if (timingsIndex == timingsLength) {
                     /* All done IDing */
-                    identifying = 0;
+                    isIdentifying = 0;
                     IO_PTTDeassert(IO_PTT_MASK_PTT1);
                 } else {
                     /* Move on to the next timing */
-                    cycles_remaining = timings[timings_index] * DIT_CYCLES;
+                    remainingCycles = timingsLUT[timingsIndex] * (DIT_CYCLES * FOXHUNT_SAMPLERATE);
                     /* if we were silent start making noise, if we were making noise be silent */
-                    key_on = key_on == 0 ? 1 : 0;
+                    isKeying = isKeying == 0 ? 1 : 0;
                 }
             }
         }

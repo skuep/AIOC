@@ -3,8 +3,7 @@
 #define WPM 20 /* words per minute rate for sending morse */
 
 /* This calculates how many samples for a dit at 48000 samples/sec and 20 WPM */
-#define SAMPLE_RATE 48000
-#define DIT_CYCLES (1.2 / WPM) * SAMPLE_RATE
+#define DIT_CYCLES (1.2 / WPM)
 
 /* Morse code has five elements (https://en.wikipedia.org/wiki/Morse_code):
  * * short mark (dit)
