@@ -6,6 +6,5 @@
 
 void FoxHunt_Init(void);
 void FoxHunt_Tick(void);
-uint8_t fox_hunt_output(void);
 
 #endif /* FOX_HUNT_H_ */
