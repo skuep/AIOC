@@ -197,13 +197,12 @@ int main(void)
         .Instance = IWDG,
         .Init = {
             .Prescaler = IWDG_PRESCALER_8,
-            .Reload = 0x0FFF,
+            .Reload = 0x02FF,
             .Window = 0x0FFF
         }
     };
     HAL_IWDG_Init(&IWDGHandle);
 
-    uint32_t i = 0;
     while (1) {
         USB_Task();
 

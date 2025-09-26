@@ -165,6 +165,12 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
                 Settings_Store();
             }
 
+            if (ctrlWord & 0x20UL) {
+                /* Reboot */
+                while(1) {
+                    /* Let IWDG expire for rebooting */
+                }
+            }
             currentAddress = address;
             break;
 
