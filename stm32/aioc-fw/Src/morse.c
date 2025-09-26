@@ -1,12 +1,13 @@
 #include "morse.h"
 #include "settings.h"
 
-/* convenience macro for calling add_timing() */
+/* convenience macro for calling addTiming.
+ * prevent the timings array from overflowing */
 #define ADD_TIMING(X) timingsIndex = (timingsIndex < timingsLUTSize) ? \
         timingsIndex + addTiming(timingsLUT, timingsIndex, (X)) : 0
 
-static uint8_t addTiming(uint8_t * timingsLUT, uint16_t timingsIndex, uint8_t value) {
-	/* prevent the timings array from overflowing */
+static uint8_t addTiming(uint8_t * timingsLUT, uint16_t timingsIndex, uint8_t value)
+{
     timingsLUT[timingsIndex] = value;
 	return 1;
 }
