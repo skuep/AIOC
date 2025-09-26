@@ -46,7 +46,7 @@ There is also a German 4-part article with instructions [here](https://dl-nordwe
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
 ## How To Fab
-- Go to JLCPCB.com and upload the GERBER-k1-aioc.zip package (under ``kicad/k1-aioc/jlcpcb``)
+- Go to JLCPCB.com and upload the ``GERBER-k1-aioc.zip`` package (under ``kicad/k1-aioc/jlcpcb``)
   - Select PCB Thickness 1.2mm (that is what I recommend with the TRS connectors I used)
   - You may want to select LeadFree HASL
   - Select Silkscreen/Soldermask color to your liking
