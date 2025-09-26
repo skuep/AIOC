@@ -1,9 +1,7 @@
 #include <stdint.h>
 
-#define WPM 20 /* words per minute rate for sending morse */
-
-/* This calculates how many samples for a dit at 48000 samples/sec and 20 WPM */
-#define DIT_CYCLES (1.2 / WPM)
+/* Length of 1 morse unit (dit) in seconds at 1 WPM */
+#define MORSE_UNIT_LENGTH 1.2
 
 /* Morse code has five elements (https://en.wikipedia.org/wiki/Morse_code):
  * * short mark (dit)
@@ -12,10 +10,10 @@
  * * short gap (between letters)
  * * medium gap (between words)
  * These are the multipliers for each */
-#define SHORT 1
-#define LONG 3
-#define GAP 1
-#define LETTER_GAP 3
-#define WORD_GAP 7
+#define MORSE_SHORT 1
+#define MORSE_LONG 3
+#define MORSE_ELEMENT_GAP 1
+#define MORSE_LETTER_GAP 3
+#define MORSE_WORD_GAP 7
 
-void set_timings(char *msg, uint8_t timings[], uint8_t *timings_length);
+void Morse_GenerateTimings(char *msg, uint8_t timings[], uint8_t *timings_length);

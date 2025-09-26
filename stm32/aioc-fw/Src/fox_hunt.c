@@ -5,6 +5,8 @@
 #define FOXHUNT_SAMPLERATE      48000
 #define FOXHUNT_VOLUME          32768
 #define FOXHUNT_CARRIERLUT_SIZE (sizeof(carrierLUT)/sizeof(*carrierLUT))
+#define FOXHUNT_WPM             20
+
 
 static uint8_t isIdentifying = 0;
 static uint8_t secondsPassed = 0;
@@ -84,7 +86,7 @@ void FoxHunt_Init(void) {
 	id[14] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 16;
 	id[15] = settingsRegMap[SETTINGS_REG_FOX_ID3] >> 24;
 
-	set_timings(id, timingsLUT, &timingsLength);
+	Morse_GenerateTimings(id, timingsLUT, &timingsLength);
 
 	if (settingsRegMap[SETTINGS_REG_FOX_INTERVAL] != 0) {
         /* Set up the DAC and timer. Note, this needs to happen after the "regular" USB Audio Subsystem Init,
@@ -107,7 +109,7 @@ void FoxHunt_Tick(void) {
 
 		isIdentifying = 1;
 		timingsIndex = 0;
-		remainingCycles = timingsLUT[timingsIndex] * (uint16_t) (DIT_CYCLES * FOXHUNT_SAMPLERATE);
+		remainingCycles = timingsLUT[timingsIndex] * ((uint32_t) (MORSE_UNIT_LENGTH * FOXHUNT_SAMPLERATE) / FOXHUNT_WPM);
 		isKeying = 0;
 	}
 }
@@ -141,7 +143,7 @@ void TIM15_IRQHandler(void)
                     IO_PTTDeassert(IO_PTT_MASK_PTT1);
                 } else {
                     /* Move on to the next timing */
-                    remainingCycles = timingsLUT[timingsIndex] * (DIT_CYCLES * FOXHUNT_SAMPLERATE);
+                    remainingCycles = timingsLUT[timingsIndex] * ((uint32_t) (MORSE_UNIT_LENGTH * FOXHUNT_SAMPLERATE) / FOXHUNT_WPM);
                     /* if we were silent start making noise, if we were making noise be silent */
                     isKeying = isKeying == 0 ? 1 : 0;
                 }
