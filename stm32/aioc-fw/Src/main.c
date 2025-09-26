@@ -190,7 +190,7 @@ int main(void)
 
     USB_Init();
 
-    fox_hunt_init();
+    FoxHunt_Init();
 
     /* Enable indepedent watchdog to reset on lockup*/
     IWDG_HandleTypeDef IWDGHandle = {
@@ -207,7 +207,16 @@ int main(void)
     while (1) {
         USB_Task();
 
-        if ( (i++ & 0x7FFF) == 0) {
+        static uint32_t lastTick = 0;
+        uint32_t nowTick = HAL_GetTick();
+
+        if ((nowTick - lastTick) >= 1000) {
+            lastTick = nowTick;
+
+            /* 1 second timebase */
+            FoxHunt_Tick();
+
+
             usb_audio_fbstats_t fb;
             USB_AudioGetSpeakerFeedbackStats(&fb);
 
@@ -265,8 +274,5 @@ void PendSV_Handler(void) {
 
 void SysTick_Handler(void) {
     HAL_IncTick();
-    if ((uwTick % 1000) == 0) { /* call fox_hunt_task() once per second */
-    	fox_hunt_task();
-    }
 }
 

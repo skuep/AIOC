@@ -1,6 +1,12 @@
-#define MAX_ID      16  /* Maximum amount of characters in the ID */
-#define MAX_TIMINGS 128 /* The size of our timings array (should be good for 16 bytes of ID) */
+#ifndef FOX_HUNT_H_
+#define FOX_HUNT_H_
 
-void fox_hunt_init(void);
-void fox_hunt_task(void);
+
+#define FOXHUNT_MAX_ID          16  /* Maximum amount of characters in the ID */
+#define FOXHUNT_MAX_TIMINGS     (FOXHUNT_MAX_ID * 8) /* The size of our timings array (should be good for 16 bytes of ID) */
+
+void FoxHunt_Init(void);
+void FoxHunt_Tick(void);
 uint8_t fox_hunt_output(void);
+
+#endif /* FOX_HUNT_H_ */

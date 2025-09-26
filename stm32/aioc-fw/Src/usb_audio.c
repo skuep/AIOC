@@ -5,7 +5,6 @@
 #include "tusb.h"
 #include "usb.h"
 #include "cos.h"
-#include "fox_hunt.h"
 #include <math.h>
 
 /* The one and only supported sample rate */
@@ -771,10 +770,6 @@ void TIM6_DAC_IRQHandler(void)
 {
     if (TIM6->SR & TIM_SR_UIF) {
         TIM6->SR = (uint32_t) ~TIM_SR_UIF;
-
-        if (fox_hunt_output() != 0)
-        	return;
-
         int16_t sample = 0x0000;
 
         /* Read from FIFO, leave sample at 0 if fifo empty */
