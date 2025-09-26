@@ -1,28 +1,27 @@
 #include "morse.h"
-#include "fox_hunt.h"
 #include "settings.h"
 
 /* convenience macro for calling add_timing() */
-#define ADD_TIMING(X) add_timing(timings, timings_length, (X))
+#define ADD_TIMING(X) timingsIndex = (timingsIndex < timingsLUTSize) ? \
+        timingsIndex + addTiming(timingsLUT, timingsIndex, (X)) : 0
 
-void add_timing(uint8_t timings[], uint8_t *timings_length, uint8_t value) {
+static uint8_t addTiming(uint8_t * timingsLUT, uint16_t timingsIndex, uint8_t value) {
 	/* prevent the timings array from overflowing */
-	if (*timings_length >= FOXHUNT_MAX_TIMINGS) {
-		return;
-	}
-	timings[(*timings_length)++] = value;
+    timingsLUT[timingsIndex] = value;
+	return 1;
 }
 
-void set_timings(char *msg, uint8_t timings[], uint8_t *timings_length) {
+uint16_t Morse_GenerateTimings(char * messageBuffer, uint8_t messageBufferSize, uint8_t * timingsLUT, uint16_t timingsLUTSize)
+{
 	char letter;
 
-	*timings_length = 0;
+	uint16_t timingsIndex = 0;
 
-	ADD_TIMING(WORD_GAP); /* Give the PTT some time to work */
+	ADD_TIMING(MORSE_HEAD); /* Give the PTT some time to work */
 
 	/* Go through the message letter by letter and set the appropriate timings */
-	for (uint8_t msg_i = 0; ((msg_i < FOXHUNT_MAX_CHARS) && (msg[msg_i] != '\0')); msg_i++) {
-		letter = msg[msg_i];
+	for (uint8_t msg_i = 0; ((msg_i < messageBufferSize) && (messageBuffer[msg_i] != '\0')); msg_i++) {
+		letter = messageBuffer[msg_i];
 
 		/* if it's lower case, make it upper case */
 		if ((letter >= 'a') && (letter <= 'z')) {
@@ -31,194 +30,194 @@ void set_timings(char *msg, uint8_t timings[], uint8_t *timings_length) {
 
 		switch (letter) {
 		case 'A':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'B':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'C':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'D':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'E':
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'F':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'G':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'H':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'I':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'J':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'K':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'L':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'M':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'N':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'O':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'P':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'Q':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'R':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'S':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case 'T':
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'U':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'V':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'W':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'X':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'Y':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case 'Z':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
 			break;
 		case '0':
 		case '1':
@@ -229,13 +228,13 @@ void set_timings(char *msg, uint8_t timings[], uint8_t *timings_length) {
 			uint8_t dits = letter - '0';
 			for (uint8_t i = 0; i < 5; i++) {
 				if (dits > 0) {
-					ADD_TIMING(SHORT);
+					ADD_TIMING(MORSE_SHORT);
 					dits--;
 				} else {
-					ADD_TIMING(LONG);
+					ADD_TIMING(MORSE_LONG);
 				}
 				if (i != 4) {
-					ADD_TIMING(GAP);
+					ADD_TIMING(MORSE_ELEMENT_GAP);
 				}
 			}
 			break;
@@ -246,49 +245,51 @@ void set_timings(char *msg, uint8_t timings[], uint8_t *timings_length) {
 			uint8_t dahs = letter - '0' - 5;
 			for (uint8_t i = 0; i < 5; i++) {
 				if (dahs > 0) {
-					ADD_TIMING(LONG);
+					ADD_TIMING(MORSE_LONG);
 					dahs--;
 				} else {
-					ADD_TIMING(SHORT);
+					ADD_TIMING(MORSE_SHORT);
 				}
 				if (i != 4) {
-					ADD_TIMING(GAP);
+					ADD_TIMING(MORSE_ELEMENT_GAP);
 				}
 			}
 			break;
 		case ' ':
-			ADD_TIMING(WORD_GAP);
+			ADD_TIMING(MORSE_WORD_GAP);
 			break;
 		case '.':
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		case '-':
-			ADD_TIMING(LONG);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(SHORT);
-			ADD_TIMING(GAP);
-			ADD_TIMING(LONG);
+			ADD_TIMING(MORSE_LONG);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_SHORT);
+			ADD_TIMING(MORSE_ELEMENT_GAP);
+			ADD_TIMING(MORSE_LONG);
 			break;
 		}
 
 		/* If this letter isn't a space, the next letter isn't a space, and we're not
          * at the end: add the LETTER_GAP */
-		if ((letter != ' ') && (msg[msg_i + 1] != ' ') && (msg[msg_i + 1] != '\0')) {
-			ADD_TIMING(LETTER_GAP);
+		if ((letter != ' ') && (messageBuffer[msg_i + 1] != ' ') && (messageBuffer[msg_i + 1] != '\0')) {
+			ADD_TIMING(MORSE_LETTER_GAP);
 		}
 	}
+
+	return timingsIndex;
 }
