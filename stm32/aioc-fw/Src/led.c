@@ -24,10 +24,10 @@ void LED_TIMER_IRQ(void)
         case LED_MODE_SLOWPULSE3X:
         case LED_MODE_SLOWPULSE2X:
         case LED_MODE_SLOWPULSE:
-            if ( !(LedCounterPrev & 0x200) && (LedCounter & 0x200) ) {
+            if ( !(LedCounterPrev & 0x2000) && (LedCounter & 0x2000) ) {
                 /* Rising Edge  */
                 LedLevels[i] = LED_FULL_LEVEL;
-            } else if ( (LedCounterPrev & 0x200) && !(LedCounter & 0x200) ) {
+            } else if ( (LedCounterPrev & 0x2000) && !(LedCounter & 0x2000) ) {
                 /* Falling Edge */
                 if (LedLevels[i] != LedIdleLevels[i]) {
                     /* Only reset colors and mode when a pulse has been carried out */
@@ -41,10 +41,10 @@ void LED_TIMER_IRQ(void)
         case LED_MODE_FASTPULSE3X:
         case LED_MODE_FASTPULSE2X:
         case LED_MODE_FASTPULSE:
-            if ( !(LedCounterPrev & 0x40) && (LedCounter & 0x40) ) {
+            if ( !(LedCounterPrev & 0x400) && (LedCounter & 0x400) ) {
                 /* Rising Edge  */
                 LedLevels[i] = LED_FULL_LEVEL;
-            } else if ( (LedCounterPrev & 0x40) && !(LedCounter & 0x40) ) {
+            } else if ( (LedCounterPrev & 0x400) && !(LedCounter & 0x400) ) {
                 /* Falling Edge */
                 if (LedLevels[i] != LedIdleLevels[i]) {
                     LedLevels[i] = LedIdleLevels[i];
@@ -69,7 +69,7 @@ void LED_TIMER_IRQ(void)
 
     /* Advance counters */
     LedCounterPrev = LedCounter;
-    LedCounter = (LedCounter + 1) & 0xFFF;
+    LedCounter = (LedCounter + 1) & 0xFFFFU;
 }
 
 void LED_Init(void)
