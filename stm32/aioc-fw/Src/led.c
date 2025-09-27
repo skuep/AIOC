@@ -1,5 +1,6 @@
 #include "led.h"
 #include "stm32f3xx_hal.h"
+#include "aioc.h"
 #include <assert.h>
 
 uint8_t LedIdleLevels[2] = {LED_IDLE_LEVEL, LED_OFF_LEVEL};
@@ -101,6 +102,6 @@ void LED_Init(void)
     LED_TIMER->DIER = TIM_DIER_UIE;
     LED_TIMER->CR1 |= TIM_CR1_CEN;
 
-
+    NVIC_SetPriority(TIM4_IRQn, AIOC_IRQ_PRIO_LED);
     NVIC_EnableIRQ(TIM4_IRQn);
 }

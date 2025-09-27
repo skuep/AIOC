@@ -1,6 +1,7 @@
 #ifndef AIOC_H_
 #define AIOC_H_
 
+#define AIOC_IRQ_PRIO_LED        7
 #define AIOC_IRQ_PRIO_SYSTICK    6
 #define AIOC_IRQ_PRIO_IO         5
 #define AIOC_IRQ_PRIO_USB        4
