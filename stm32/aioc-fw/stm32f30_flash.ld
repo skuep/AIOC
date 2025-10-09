@@ -76,6 +76,12 @@ SECTIONS
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
 
+  .eeprom 0x0801F000 :
+  {
+    _eeprom = .;
+    KEEP(*(.eeprom))
+  }
+  
   /* Constant data goes into FLASH */
   .rodata :
   {

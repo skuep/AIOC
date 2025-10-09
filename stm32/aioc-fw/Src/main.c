@@ -1,9 +1,11 @@
 #include "stm32f3xx_hal.h"
 #include "aioc.h"
+#include "settings.h"
 #include "led.h"
-#include "ptt.h"
 #include "usb.h"
+#include "fox_hunt.h"
 #include <assert.h>
+#include <io.h>
 #include <stdio.h>
 
 // from ST application note AN2606
@@ -99,7 +101,7 @@ static void SystemReset(void) {
 #endif
     }
 
-    if (resetFlags & RCC_CSR_IWDGRSTF) {
+    if (resetFlags & RCC_CSR_WWDGRSTF) {
 #if defined(SYSTEM_MEMORY_BASE)
         /* Reset cause was watchdog, which is used for rebooting into the bootloader.
            Set stack pointer to *SYSTEM_MEMORY_BASE
@@ -178,19 +180,42 @@ int main(void)
     SystemReset();
     SystemClock_Config();
 
+    Settings_Init();
+
     LED_Init();
     LED_MODE(0, LED_MODE_SLOWPULSE2X);
     LED_MODE(1, LED_MODE_SLOWPULSE2X);
 
-    PTT_Init();
+    IO_Init();
 
     USB_Init();
 
-    uint32_t i = 0;
+    FoxHunt_Init();
+
+    /* Enable indepedent watchdog to reset on lockup*/
+    IWDG_HandleTypeDef IWDGHandle = {
+        .Instance = IWDG,
+        .Init = {
+            .Prescaler = IWDG_PRESCALER_8,
+            .Reload = 0x02FF,
+            .Window = 0x0FFF
+        }
+    };
+    HAL_IWDG_Init(&IWDGHandle);
+
     while (1) {
         USB_Task();
 
-        if ( (i++ & 0x7FFF) == 0) {
+        static uint32_t lastTick = 0;
+        uint32_t nowTick = HAL_GetTick();
+
+        if ((nowTick - lastTick) >= 1000) {
+            lastTick = nowTick;
+
+            /* 1 second timebase */
+            FoxHunt_Tick();
+
+
             usb_audio_fbstats_t fb;
             USB_AudioGetSpeakerFeedbackStats(&fb);
 
@@ -203,6 +228,8 @@ int main(void)
                     fb.feedbackMin, fb.feedbackMax, fb.feedbackAvg);
 #endif
         }
+
+        HAL_IWDG_Refresh(&IWDGHandle);
     }
 
   return 0;

@@ -24,12 +24,30 @@
  */
 #include "tusb.h"
 #include "usb_descriptors.h"
+#include "settings.h"
 #include "stm32f3xx_hal.h"
+
+/* For quirk detection, borrowed from tinyusb uac2_speaker_fb example */
+static tusb_desc_type_t desc_req_buf[2];
+static int desc_req_idx = 0;
+
+void quirk_host_os_hint_desc_cb(tusb_desc_type_t desc) {
+  if (desc == TUSB_DESC_DEVICE) {
+    desc_req_idx = 0;
+  } else if (desc_req_idx < 2 && (desc == TUSB_DESC_CONFIGURATION || desc == TUSB_DESC_BOS || desc == TUSB_DESC_STRING)) {
+    // Skip redundant request
+    if (desc_req_idx == 0 || (desc_req_idx > 0 && desc_req_buf[desc_req_idx - 1] != desc)) {
+      desc_req_buf[desc_req_idx++] = desc;
+    }
+  }
+}
+
+
 
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
-tusb_desc_device_t const desc_device = {
+tusb_desc_device_t desc_device = {
     .bLength = sizeof(tusb_desc_device_t),
     .bDescriptorType    = TUSB_DESC_DEVICE,
     .bcdUSB             = USB_BCD,
@@ -49,6 +67,12 @@ tusb_desc_device_t const desc_device = {
 // Invoked when received GET DEVICE DESCRIPTOR
 // Application return pointer to descriptor
 uint8_t const* tud_descriptor_device_cb(void) {
+    /* Get up-to-date USB settings */
+    desc_device.idVendor  = (settingsRegMap[SETTINGS_REG_USBID] & SETTINGS_REG_USBID_VID_MASK) >> SETTINGS_REG_USBID_VID_OFFS;
+    desc_device.idProduct = (settingsRegMap[SETTINGS_REG_USBID] & SETTINGS_REG_USBID_PID_MASK) >> SETTINGS_REG_USBID_PID_OFFS;
+
+    quirk_host_os_hint_desc_cb(TUSB_DESC_DEVICE);
+
     return (uint8_t const*) &desc_device;
 }
 
@@ -64,18 +88,18 @@ uint8_t const desc_hid_report[] = {
       /* Volume Up/Dn */
       HID_LOGICAL_MIN ( 0x00                                    ),
       HID_LOGICAL_MAX ( 0x01                                    ),
-      HID_USAGE       ( 0xE9 /* Volume Inc */                   ),
-      HID_USAGE       ( 0xEA /* Volume Dec */                   ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_REPORT_SIZE ( 1                                       ),
       HID_REPORT_COUNT( 2                                       ),
       HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
       /* Mute */
-      HID_USAGE       ( 0xE2 /* Volume Mute */                  ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE  ),
       /* Hook Switch */
       HID_USAGE_PAGE  ( HID_USAGE_PAGE_TELEPHONY                ),
-      HID_USAGE       ( 0x20 /* Hook Switch */                  ),
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_REPORT_COUNT( 1                                       ),
       HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE | HID_NULL_STATE),
       /* Filler */
@@ -93,6 +117,10 @@ uint8_t const desc_hid_report[] = {
       HID_USAGE       ( 0x00 /* Unassigned */                   ),
       HID_REPORT_COUNT( 4                                       ),
       HID_OUTPUT      ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
+      /* Feature for configuring AIOC */
+      HID_USAGE       ( 0x00 /* Unassigned */                   ),
+      HID_REPORT_COUNT( 6                                       ),
+      HID_FEATURE     ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE  ),
     HID_COLLECTION_END
 };
 
@@ -116,57 +144,65 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
         AIOC_DFU_RT_DESC_LEN \
 )
 
-uint8_t const desc_fs_configuration[] = {
-    // Config number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(
-        /* config_num */    1,
-        /* _itfcount */     ITF_NUM_TOTAL,
-        /* _stridx */       0x00,
-        /* _total_len */    CONFIG_TOTAL_LEN,
-        /* _attribute */    0x00,
-        /* _power_ma */     100
-    ),
-
-    AIOC_AUDIO_DESCRIPTOR(
-        /* _itfnum */       ITF_NUM_AUDIO_CONTROL,
-        /* _stridx */       STR_IDX_AUDIOITF,
-        /* _nBytesPerSample */ CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE,
-        /* _nBitsUsedPerSample */ CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE*8,
-        /* _epin */         EPNUM_AUDIO_IN,
-        /* _epinsize */     CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX,
-        /* _epout */        EPNUM_AUDIO_OUT,
-        /* _epoutsize */    CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX,
-        /* _epfb */         EPNUM_AUDIO_FB
-    ),
-    AIOC_HID_DESCRIPTOR(
-        /* _itfnum */       ITF_NUM_HID,
-        /* _stridx */       STR_IDX_HIDITF,
-        /* _boot_protocol */HID_ITF_PROTOCOL_NONE,
-        /*_report_desc_len*/sizeof(desc_hid_report),
-        /* _epin */         EPNUM_HID_IN,
-        /* _epsize */       CFG_TUD_HID_EP_BUFSIZE,
-        /* _ep_interval */  0x20
-    ),
-
-    AIOC_CDC_DESCRIPTOR(
-        /* _itfnum */       ITF_NUM_CDC_0,
-        /* _stridx */       STR_IDX_CDCITF,
-        /* _ep_notif */     EPNUM_CDC_0_NOTIF,
-        /* _ep_notif_size */ 8,
-        /* _epout */        EPNUM_CDC_0_OUT,
-        /* _epin */         EPNUM_CDC_0_IN,
-        /* _epsize */       CFG_TUD_CDC_EP_BUFSIZE
-    ),
-
-    AIOC_DFU_RT_DESCRIPTOR(
-        /* _itfnum */       ITF_NUM_DFU_RT,
-        /* _stridx */       STR_IDX_DFU_RT,
+/* Make this as template, due to quirks necessary in feedback endpoint size */
+#define CONFIG_DESC(_quirk)                                                     \
+    TUD_CONFIG_DESCRIPTOR(                                                      \
+        /* config_num */    1,                                                  \
+        /* _itfcount */     ITF_NUM_TOTAL,                                      \
+        /* _stridx */       0x00,                                               \
+        /* _total_len */    CONFIG_TOTAL_LEN,                                   \
+        /* _attribute */    0x00,                                               \
+        /* _power_ma */     100                                                 \
+    ),                                                                          \
+    AIOC_AUDIO_DESCRIPTOR(                                                      \
+        /* _itfnum */       ITF_NUM_AUDIO_CONTROL,                              \
+        /* _stridx */       STR_IDX_AUDIOITF,                                   \
+        /* _nBytesPerSample */ CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE,         \
+        /* _nBitsUsedPerSample */ CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE*8,    \
+        /* _epin */         EPNUM_AUDIO_IN,                                     \
+        /* _epinsize */     CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX,                  \
+        /* _epout */        EPNUM_AUDIO_OUT,                                    \
+        /* _epoutsize */    CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX,                 \
+        /* _epfb */         EPNUM_AUDIO_FB,                                     \
+        /*  epfbsize */     ((_quirk) ? 4 : 3)                                  \
+    ),                                                                          \
+    AIOC_HID_DESCRIPTOR(                                                        \
+        /* _itfnum */       ITF_NUM_HID,                                        \
+        /* _stridx */       STR_IDX_HIDITF,                                     \
+        /* _boot_protocol */HID_ITF_PROTOCOL_NONE,                              \
+        /*_report_desc_len*/sizeof(desc_hid_report),                            \
+        /* _epin */         EPNUM_HID_IN,                                       \
+        /* _epsize */       CFG_TUD_HID_EP_BUFSIZE,                             \
+        /* _ep_interval */  0x20                                                \
+    ),                                                                          \
+    AIOC_CDC_DESCRIPTOR(                                                        \
+        /* _itfnum */       ITF_NUM_CDC_0,                                      \
+        /* _stridx */       STR_IDX_CDCITF,                                     \
+        /* _ep_notif */     EPNUM_CDC_0_NOTIF,                                  \
+        /* _ep_notif_size */ 8,                                                 \
+        /* _epout */        EPNUM_CDC_0_OUT,                                    \
+        /* _epin */         EPNUM_CDC_0_IN,                                     \
+        /* _epsize */       CFG_TUD_CDC_EP_BUFSIZE                              \
+    ),                                                                          \
+    AIOC_DFU_RT_DESCRIPTOR(                                                     \
+        /* _itfnum */       ITF_NUM_DFU_RT,                                     \
+        /* _stridx */       STR_IDX_DFU_RT,                                     \
         /* _attr */         DFU_ATTR_WILL_DETACH | \
                             DFU_ATTR_CAN_UPLOAD  | \
-                            DFU_ATTR_CAN_DOWNLOAD,
-        /* _timeout */      255, /* not used if WILL_DETACH */
-        /* _xfer_size */    2048 /* max size for stm32 dfu bootloader */
+                            DFU_ATTR_CAN_DOWNLOAD,                              \
+        /* _timeout */      255, /* not used if WILL_DETACH */                  \
+        /* _xfer_size */    2048 /* max size for stm32 dfu bootloader */        \
     )
+
+uint8_t const desc_fs_configuration_quirk[] = {
+    /* quirk is required for Windows, Linux doesn't care.
+     * (see https://github.com/hathach/tinyusb/pull/2328/commits/6a67bac47c0f83eebd63ca99654ed26e51b21145) */
+    CONFIG_DESC(/* quirk */1)
+};
+
+uint8_t const desc_fs_configuration[] = {
+    /* no quirk is required for MacOS, Linux doesn't care */
+    CONFIG_DESC(/* quirk */0)
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
@@ -176,7 +212,15 @@ uint8_t const* tud_descriptor_configuration_cb(uint8_t index) {
     (void) index; // for multiple configurations
 
     TU_ASSERT(!TUD_OPT_HIGH_SPEED);
-    return desc_fs_configuration;
+
+    quirk_host_os_hint_desc_cb(TUSB_DESC_CONFIGURATION);
+
+    /* Try to guess the host OS so we can apply the quirk where needed */
+    if (USB_DescUAC2Quirk()) {
+        return desc_fs_configuration_quirk;
+    } else {
+        return desc_fs_configuration;
+    }
 }
 
 //--------------------------------------------------------------------+
@@ -303,5 +347,18 @@ const uint16_t * tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     buffer[0] = len + 2;
     buffer[1] = TUSB_DESC_STRING;
 
+    quirk_host_os_hint_desc_cb(TUSB_DESC_STRING);
+
     return (void *) buffer;
+}
+
+bool USB_DescUAC2Quirk(void)
+{
+    if ( (desc_req_buf[0] == TUSB_DESC_STRING) && (desc_req_buf[1] == TUSB_DESC_BOS || desc_req_buf[1] == TUSB_DESC_CONFIGURATION) ) {
+        /* This pattern of descriptor requests is only found on MacOS devices. MacOS needs the non-quirked descriptor */
+        return false;
+    } else {
+        /* Other patterns hint to Windows, which requires the quirk. Or Linux, which doesn't care and works either way */
+        return true;
+    }
 }

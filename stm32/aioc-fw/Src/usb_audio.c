@@ -1,8 +1,10 @@
+#include <io.h>
 #include "usb_audio.h"
 #include "stm32f3xx_hal.h"
 #include "aioc.h"
 #include "tusb.h"
 #include "usb.h"
+#include "cos.h"
 #include <math.h>
 
 /* The one and only supported sample rate */
@@ -15,6 +17,7 @@
 #define SPEAKER_BUFLVL_FB_COUPLING 1
 /* We try to stay on this target with the buffer level */
 #define SPEAKER_BUFFERLVL_TARGET (5 * CFG_TUD_AUDIO_EP_SZ_OUT) /* Keep our buffer at 5 frames, i.e. 5ms at full-speed USB and maximum sample rate */
+
 
 typedef enum {
     SAMPLERATE_48000, /* The high-quality default */
@@ -73,6 +76,10 @@ static void Timer_ADC_Init(void);
 static void Timer_DAC_Init(void);
 static void ADC_Init(void);
 static void DAC_Init(void);
+static void RX_Config(usb_audio_rxgain_t rxGain);
+static void TX_Config(usb_audio_txboost_t txBoost);
+static void Timeout_Timers_Init(void);
+
 
 //--------------------------------------------------------------------+
 // Application Callback API Implementations
@@ -104,6 +111,11 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 
         microphoneMute[channelNum] = ((audio_control_cur_1_t*) pBuff)->bCur;
 
+        /* Update debug register */
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] =  (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~(SETTINGS_REG_INFO_AUDIO0_RECMUTE0_MASK | SETTINGS_REG_INFO_AUDIO0_RECMUTE1_MASK)) \
+                                                | (microphoneMute[0] ? SETTINGS_REG_INFO_AUDIO0_RECMUTE0_MASK : 0) \
+                                                | (microphoneMute[1] ? SETTINGS_REG_INFO_AUDIO0_RECMUTE1_MASK : 0);
+
         TU_LOG2("    Set Mute: %d of channel: %u\r\n", microphoneMute[channelNum], channelNum);
       return true;
 
@@ -115,6 +127,9 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         double logVolume = microphoneLogVolume[channelNum] / 256; /* format is 7.8 fixed point */
         microphoneLinVolume[channelNum] = (microphoneLogVolume[channelNum] != 0x8000) ?
                 (uint16_t) (65535 * pow(10, logVolume/20) + 0.5) : 0; /* log to linear with rounding */
+
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO3] = ((((uint32_t) microphoneLinVolume[0]) << SETTINGS_REG_INFO_AUDIO3_RECVOL0_OFFS) & SETTINGS_REG_INFO_AUDIO3_RECVOL0_MASK) \
+                                               | ((((uint32_t) microphoneLinVolume[1]) << SETTINGS_REG_INFO_AUDIO3_RECVOL1_OFFS) & SETTINGS_REG_INFO_AUDIO3_RECVOL1_MASK);
 
         TU_LOG2("    Set Volume: %u.%u dB of channel: %u\r\n", microphoneLogVolume[channelNum] / 256, microphoneLogVolume[channelNum] % 256, channelNum);
       return true;
@@ -136,6 +151,11 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 
         speakerMute[channelNum] = ((audio_control_cur_1_t*) pBuff)->bCur;
 
+        /* Update debug register */
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] =  (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~(SETTINGS_REG_INFO_AUDIO0_PLAYMUTE0_MASK | SETTINGS_REG_INFO_AUDIO0_PLAYMUTE1_MASK)) \
+                                                | (speakerMute[0] ? SETTINGS_REG_INFO_AUDIO0_PLAYMUTE0_MASK : 0) \
+                                                | (speakerMute[1] ? SETTINGS_REG_INFO_AUDIO0_PLAYMUTE1_MASK : 0);
+
         TU_LOG2("    Set Mute: %d of channel: %u\r\n", speakerMute[channelNum], channelNum);
 
       return true;
@@ -148,6 +168,11 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
         double logVolume = (double) speakerLogVolume[channelNum] / 256; /* format is 7.8 fixed point */
         speakerLinVolume[channelNum] = (speakerLogVolume[channelNum] != 0x8000) ?
                 (uint16_t) (65535 * pow(10, logVolume/20) + 0.5) : 0; /* log to linear with rounding */
+
+        /* Update debug register */
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO9] = ((((uint32_t) speakerLinVolume[0]) << SETTINGS_REG_INFO_AUDIO9_PLAYVOL0_OFFS) & SETTINGS_REG_INFO_AUDIO9_PLAYVOL0_MASK) \
+                                               | ((((uint32_t) speakerLinVolume[1]) << SETTINGS_REG_INFO_AUDIO9_PLAYVOL1_OFFS) & SETTINGS_REG_INFO_AUDIO9_PLAYVOL1_MASK);
+
 
         TU_LOG2("    Set Volume: %u.%u dB of channel: %u\r\n", microphoneLogVolume[channelNum] / 256, microphoneLogVolume[channelNum] % 256, channelNum);
       return true;
@@ -173,6 +198,9 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
             TU_LOG2("    Set Mic. Sample Freq: %lu\r\n", microphoneSampleFreq);
 
             Timer_ADC_Init();
+
+            /* Update debug register */
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO2] = (((uint32_t) microphoneSampleFreqCfg) << SETTINGS_REG_INFO_AUDIO2_RECRATE_OFFS) & SETTINGS_REG_INFO_AUDIO2_RECRATE_MASK;
 
             return true;
 
@@ -204,6 +232,9 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
             TU_LOG2("    Set Spk. Sample Freq: %lu\r\n", speakerSampleFreq);
 
             Timer_DAC_Init();
+
+            /* Update debug register */
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO8] = (((uint32_t) speakerSampleFreqCfg) << SETTINGS_REG_INFO_AUDIO8_PLAYRATE_OFFS) & SETTINGS_REG_INFO_AUDIO8_PLAYRATE_MASK;
 
             return true;
 
@@ -488,8 +519,23 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, u
 
     if (microphoneState == STATE_START) {
         /* Start ADC sampling as soon as device stacks starts loading data (will be a ZLP for first frame) */
+        uint8_t rxGainSetting = (settingsRegMap[SETTINGS_REG_AUDIO_RX] & SETTINGS_REG_AUDIO_RX_RXGAIN_MASK) >> SETTINGS_REG_AUDIO_RX_RXGAIN_OFFS;
+        usb_audio_rxgain_t rxGain =
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_1X_ENUM) ? USB_AUDIO_RXGAIN_1X :
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_2X_ENUM) ? USB_AUDIO_RXGAIN_2X :
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_4X_ENUM) ? USB_AUDIO_RXGAIN_4X :
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_8X_ENUM) ? USB_AUDIO_RXGAIN_8X :
+                (rxGainSetting == SETTINGS_REG_AUDIO_RX_RXGAIN_16X_ENUM) ? USB_AUDIO_RXGAIN_16X :
+                USB_AUDIO_RXGAIN_1X;
+
+        RX_Config(rxGain);
+
         NVIC_EnableIRQ(ADC1_2_IRQn);
         microphoneState = STATE_RUN;
+
+        /* Update debug register */
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_RECSTATE_MASK)
+                                               | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_RECSTATE_RUN_ENUM) << SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFFS);
     }
 
     return true;
@@ -507,9 +553,14 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
 
     if (speakerState == STATE_START) {
         if (count >= SPEAKER_BUFFERLVL_TARGET) {
-            /* Wait until whe are at buffer target fill level, then start DAC output */
+            /* Wait until we are at buffer target fill level, then start DAC output */
             speakerState = STATE_RUN;
+            TX_Config((settingsRegMap[SETTINGS_REG_AUDIO_TX] & SETTINGS_REG_AUDIO_TX_TXBOOST_MASK) ? USB_AUDIO_TXBOOST_ON : USB_AUDIO_TXBOOST_OFF);
             NVIC_EnableIRQ(TIM6_DAC1_IRQn);
+
+            /* Update debug register */
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_MASK)
+                                                   | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_RUN_ENUM) << SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFFS);
         }
 
         /* Initialize/override min/max/avg during startup buffering */
@@ -517,6 +568,11 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
         speakerBufferLvlMin = count;
         speakerBufferLvlMax = count;
     }
+
+    /* Write to debug registers */
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO10] = ((uint32_t) (speakerBufferLvlAvg >> 16) << SETTINGS_REG_INFO_AUDIO10_PLAYBUFAVG_OFFS) & SETTINGS_REG_INFO_AUDIO10_PLAYBUFAVG_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO11] = ((uint32_t) speakerBufferLvlMin         << SETTINGS_REG_INFO_AUDIO11_PLAYBUFMIN_OFFS) & SETTINGS_REG_INFO_AUDIO11_PLAYBUFMIN_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO12] = ((uint32_t) speakerBufferLvlMax         << SETTINGS_REG_INFO_AUDIO12_PLAYBUFMAX_OFFS) & SETTINGS_REG_INFO_AUDIO12_PLAYBUFMAX_MASK;
 
     return true;
 }
@@ -535,6 +591,13 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
         if (alt == 1) {
             /* Microphone channel has been activated */
             microphoneState = STATE_START;
+
+            /* Update VCOS/VPTT timeouts */
+            Timeout_Timers_Init();
+
+            /* Update debug register */
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_RECSTATE_MASK)
+                                                   | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_RECSTATE_START_ENUM) << SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFFS);
         }
         break;
 
@@ -542,6 +605,13 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
         if (alt == 1) {
             /* Speaker channel has been activated */
             speakerState = STATE_START;
+
+            /* Update VCOS/VPTT timeouts */
+            Timeout_Timers_Init();
+
+            /* Update debug register */
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_MASK)
+                                                   | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_START_ENUM) << SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFFS);
         }
         break;
 
@@ -564,12 +634,20 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
         /* Microphone channel has been stopped */
         NVIC_DisableIRQ(ADC1_2_IRQn);
         microphoneState = STATE_OFF;
+
+        /* Update debug register */
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_RECSTATE_MASK)
+                                               | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFF_ENUM) << SETTINGS_REG_INFO_AUDIO0_RECSTATE_OFFS);
         break;
 
     case ITF_NUM_AUDIO_STREAMING_OUT:
         /* Speaker channel has been stopped */
         NVIC_DisableIRQ(TIM6_DAC1_IRQn);
         speakerState = STATE_OFF;
+
+        /* Update debug register */
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] = (settingsRegMap[SETTINGS_REG_INFO_AUDIO0] & ~SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_MASK)
+                                               | (((uint32_t) SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFF_ENUM) << SETTINGS_REG_INFO_AUDIO0_PLAYSTATE_OFFS);
         break;
 
     default:
@@ -586,6 +664,17 @@ void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedba
     feedback_param->frequency.mclk_freq = USB_SOF_TIMER_HZ;
     feedback_param->sample_freq = speakerSampleFreqCfg;
     feedback_param->method = AUDIO_FEEDBACK_METHOD_FREQUENCY_FIXED;
+}
+
+bool tud_audio_feedback_format_correction_cb(uint8_t func_id)
+{
+    /* Use the quirk detection to detect whether we need format correction (10.14) according to the USB specification (MacOS)
+     * or whether we use no correction (16.16) as a quirk (Windows). Linux works either way. */
+    if (tud_speed_get() == TUSB_SPEED_FULL) {
+        return USB_DescUAC2Quirk() ? false : true;
+    } else {
+        return false;
+    }
 }
 
 TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t frame_number, uint8_t interval_shift)
@@ -635,14 +724,36 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
         speakerFeedbackMin = feedback;
         speakerFeedbackMax = feedback;
     }
+
+    /* Write to debug registers */
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO13] = ((uint32_t) (speakerFeedbackAvg >> 16) << SETTINGS_REG_INFO_AUDIO13_PLAYFBAVG_OFFS) & SETTINGS_REG_INFO_AUDIO13_PLAYFBAVG_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO14] = ((uint32_t) speakerFeedbackMin         << SETTINGS_REG_INFO_AUDIO14_PLAYFBMIN_OFFS) & SETTINGS_REG_INFO_AUDIO14_PLAYFBMIN_MASK;
+    settingsRegMap[SETTINGS_REG_INFO_AUDIO15] = ((uint32_t) speakerFeedbackMax         << SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_OFFS) & SETTINGS_REG_INFO_AUDIO15_PLAYFBMAX_MASK;
 }
 
 void ADC1_2_IRQHandler (void)
 {
-    if (ADC2->ISR & ADC_ISR_EOS) {
-        ADC2->ISR = ADC_ISR_EOS;
+    if ( (ADC1->ISR & ADC_ISR_EOS) || (ADC2->ISR & ADC_ISR_EOS) ) {
+        int16_t sample = 0;
+
         /* Get ADC sample */
-        int16_t sample = ((int32_t) ADC2->DR - 32768) & 0xFFFFU;
+        if (ADC1->ISR & ADC_ISR_EOS) {
+            ADC1->ISR = ADC_ISR_EOS;
+            sample = ((int32_t) ADC1->DR - 32768) & 0xFFFFU;
+        }
+
+        if (ADC2->ISR & ADC_ISR_EOS) {
+            ADC2->ISR = ADC_ISR_EOS;
+            sample = ((int32_t) ADC2->DR - 32768) & 0xFFFFU;
+        }
+
+        /* Automatic COS */
+        uint16_t cosThreshold = (settingsRegMap[SETTINGS_REG_VCOS_LVLCTRL] & SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VCOS_LVLCTRL_THRSHLD_OFFS;
+
+        if (!microphoneMute[1] && ( (sample > cosThreshold) || (sample < -cosThreshold) )) {
+            /* Reset timeout and make sure timer is enabled */
+            TIM17->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
+        }
 
         /* Get volume */
         uint16_t volume = !microphoneMute[1] ? microphoneLinVolume[1] : 0;
@@ -664,6 +775,14 @@ void TIM6_DAC_IRQHandler(void)
         /* Read from FIFO, leave sample at 0 if fifo empty */
         tud_audio_read(&sample, sizeof(sample));
 
+        /* Automatic PTT */
+        uint16_t pttThreshold = (settingsRegMap[SETTINGS_REG_VPTT_LVLCTRL] & SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_MASK) >> SETTINGS_REG_VPTT_LVLCTRL_THRSHLD_OFFS;
+
+        if (!speakerMute[1] && ( (sample > pttThreshold) || (sample < -pttThreshold) )) {
+            /* Reset timeout and make sure timer is enabled */
+            TIM16->EGR = TIM_EGR_UG; /* Generate an update event in the timer */
+        }
+
         /* Get volume */
         uint16_t volume = !speakerMute[1] ? speakerLinVolume[1] : 0;
 
@@ -675,8 +794,81 @@ void TIM6_DAC_IRQHandler(void)
     }
 }
 
+void TIM16_IRQHandler(void)
+{
+    /* This is a timeout counter for the automatic PTT function */
+    uint32_t flags = TIM16->SR;
+
+    if (flags & TIM_SR_UIF) {
+        /* Timer was reset (via the EGR register). */
+        uint32_t cr = TIM16->CR1;
+        if (!(cr & TIM_CR1_CEN)) {
+            /* If timer was not enabled previously, enable timer and assert PTT */
+            TIM16->CR1 = cr | TIM_CR1_CEN;
+
+            /* Update debug register */
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] |= SETTINGS_REG_INFO_AIOC0_VPTTSTATE_MASK;
+
+            /* Assert enabled PTTs */
+            uint8_t pttMask = IO_PTT_MASK_NONE;
+            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_VPTT_MASK ? IO_PTT_MASK_PTT1 : 0;
+            pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_VPTT_MASK ? IO_PTT_MASK_PTT2 : 0;
+
+            IO_PTTAssert(pttMask);
+        }
+    } else if (flags & TIM_SR_CC1IF) {
+        /* The idle timeout (without any action on the DAC) was reached. Disable timer and deassert PTT */
+        TIM16->CR1 &= ~TIM_CR1_CEN;
+
+        /* Update debug register */
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] &= ~SETTINGS_REG_INFO_AIOC0_VPTTSTATE_MASK;
+
+        /* Deassert enabled PTTs */
+        uint8_t pttMask = IO_PTT_MASK_NONE;
+        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_VPTT_MASK ? IO_PTT_MASK_PTT1 : 0;
+        pttMask |= settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_VPTT_MASK ? IO_PTT_MASK_PTT2 : 0;
+
+        IO_PTTDeassert(pttMask);
+    }
+
+    TIM16->SR = ~flags;
+}
+
+void TIM17_IRQHandler(void)
+{
+    /* This is a timeout counter for the automatic COS function */
+    uint32_t flags = TIM17->SR;
+
+    if (flags & TIM_SR_UIF) {
+        /* Timer was reset (via the EGR register). */
+        uint32_t cr = TIM17->CR1;
+        if (!(cr & TIM_CR1_CEN)) {
+            /* If timer was not enabled previously, enable timer and notify host of COS */
+            TIM17->CR1 = cr | TIM_CR1_CEN;
+
+            /* Update debug register */
+            settingsRegMap[SETTINGS_REG_INFO_AUDIO0] |= SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK;
+
+            /* Set COS state */
+            COS_VirtualSetState(0x01);
+        }
+    } else if (flags & TIM_SR_CC1IF) {
+        /* The idle timeout (without any action on the ADC) was reached. Disable timer and notify host */
+        TIM17->CR1 &= ~TIM_CR1_CEN;
+
+        /* Update debug register */
+        settingsRegMap[SETTINGS_REG_INFO_AUDIO0] &= ~SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK;
+
+        /* Set COS state */
+        COS_VirtualSetState(0x00);
+    }
+
+    TIM17->SR = ~flags;
+}
+
 static void GPIO_Init(void)
 {
+    __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
     GPIO_InitTypeDef ADCInGpio;
@@ -686,6 +878,22 @@ static void GPIO_Init(void)
     ADCInGpio.Speed = GPIO_SPEED_FREQ_LOW;
     ADCInGpio.Alternate = 0;
     HAL_GPIO_Init(GPIOB, &ADCInGpio);
+
+    GPIO_InitTypeDef OPAMP1InGpio;
+    OPAMP1InGpio.Pin = GPIO_PIN_5;
+    OPAMP1InGpio.Mode = GPIO_MODE_ANALOG;
+    OPAMP1InGpio.Pull = GPIO_NOPULL;
+    OPAMP1InGpio.Speed = GPIO_SPEED_FREQ_LOW;
+    OPAMP1InGpio.Alternate = 0;
+    HAL_GPIO_Init(GPIOA, &OPAMP1InGpio);
+
+    GPIO_InitTypeDef OPAMP2OutGpio;
+    OPAMP2OutGpio.Pin = GPIO_PIN_6;
+    OPAMP2OutGpio.Mode = GPIO_MODE_ANALOG;
+    OPAMP2OutGpio.Pull = GPIO_NOPULL;
+    OPAMP2OutGpio.Speed = GPIO_SPEED_FREQ_LOW;
+    OPAMP2OutGpio.Alternate = 0;
+    HAL_GPIO_Init(GPIOA, &OPAMP2OutGpio);
 
     GPIO_InitTypeDef SamplerateGpio;
     SamplerateGpio.Pin = GPIO_PIN_0;
@@ -702,6 +910,14 @@ static void GPIO_Init(void)
     DACOutGpio.Speed = GPIO_SPEED_FREQ_LOW;
     DACOutGpio.Alternate = 0;
     HAL_GPIO_Init(GPIOA, &DACOutGpio);
+
+    GPIO_InitTypeDef DACAttenGpio;
+    DACAttenGpio.Pin = GPIO_PIN_3;
+    DACAttenGpio.Mode = GPIO_MODE_OUTPUT_OD;
+    DACAttenGpio.Pull = GPIO_NOPULL;
+    DACAttenGpio.Speed = GPIO_SPEED_FREQ_LOW;
+    DACAttenGpio.Alternate = 0;
+    HAL_GPIO_Init(GPIOA, &DACAttenGpio);
 }
 
 static void Timer_ADC_Init(void)
@@ -759,9 +975,13 @@ static void Timer_DAC_Init(void)
 
 static void ADC_Init(void)
 {
+    /* We use two ADCs. ADC1 is used, when OPAMP(PGA) is used. Otherwise ADC2 with direct hardware connection is used */
+    __HAL_RCC_ADC1_CLK_ENABLE();
     __HAL_RCC_ADC2_CLK_ENABLE();
 
+    ADC1->CR = 0x00 << ADC_CR_ADVREGEN_Pos;
     ADC2->CR = 0x00 << ADC_CR_ADVREGEN_Pos;
+    ADC1->CR = 0x01 << ADC_CR_ADVREGEN_Pos;
     ADC2->CR = 0x01 << ADC_CR_ADVREGEN_Pos;
 
     for (uint32_t i=0; i<200; i++) {
@@ -771,31 +991,34 @@ static void ADC_Init(void)
     /* Select AHB clock */
     ADC12_COMMON->CCR = (0x1 << ADC12_CCR_CKMODE_Pos) | (0x00 << ADC12_CCR_MULTI_Pos);
 
+    ADC1->CR |= ADC_CR_ADCAL;
     ADC2->CR |= ADC_CR_ADCAL;
 
-    while (ADC2->CR & ADC_CR_ADCAL)
+    while ( (ADC1->CR & ADC_CR_ADCAL) || (ADC2->CR & ADC_CR_ADCAL) )
         ;
 
+    ADC1->CR |= ADC_CR_ADEN;
     ADC2->CR |= ADC_CR_ADEN;
 
     /* Wait for ADC to be ready */
-    while (!(ADC2->ISR & ADC_ISR_ADRDY))
+    while (!(ADC1->ISR & ADC_ISR_ADRDY) || !(ADC2->ISR & ADC_ISR_ADRDY) )
         ;
 
     /* External Trigger on TIM3_TRGO, left aligned data with 12 bit resolution */
+    ADC1->CFGR = (0x01 << ADC_CFGR_EXTEN_Pos)  | (0x04 << ADC_CFGR_EXTSEL_Pos) | (ADC_CFGR_ALIGN) | (0x00 << ADC_CFGR_RES_Pos);
     ADC2->CFGR = (0x01 << ADC_CFGR_EXTEN_Pos)  | (0x04 << ADC_CFGR_EXTSEL_Pos) | (ADC_CFGR_ALIGN) | (0x00 << ADC_CFGR_RES_Pos);
 
-    /* Maximum sample time of 601.5 cycles for channel 12. */
+    /* Maximum sample time of 601.5 cycles for channel 3/channel 12. */
+    ADC1->SMPR1 = 0x7 << ADC_SMPR1_SMP3_Pos;
     ADC2->SMPR2 = 0x7 << ADC_SMPR2_SMP12_Pos;
 
-    /* Sample only channel 12 in a regular sequence */
+    /* Sample only channel 3/channel 12 in a regular sequence */
+    ADC1->SQR1 = ( 3 << ADC_SQR1_SQ1_Pos) | (0 << ADC_SQR1_L_Pos);
     ADC2->SQR1 = (12 << ADC_SQR1_SQ1_Pos) | (0 << ADC_SQR1_L_Pos);
 
     /* Enable Interrupt Request */
+    ADC1->IER = ADC_IER_EOSIE;
     ADC2->IER = ADC_IER_EOSIE;
-
-    /* Start ADC */
-    ADC2->CR |= ADC_CR_ADSTART;
 
     NVIC_SetPriority(ADC1_2_IRQn, AIOC_IRQ_PRIO_AUDIO);
 }
@@ -806,6 +1029,103 @@ static void DAC_Init(void)
 
     /* Select TIM6 TRGO as trigger and enable DAC */
     DAC->CR = (0x0 << DAC_CR_TSEL1_Pos) | DAC_CR_TEN1 | DAC_CR_EN1;
+
+    /* Output VDD/2 */
+    DAC1->DHR12L1 = 32768;
+}
+
+static void RX_Config(usb_audio_rxgain_t rxGain)
+{
+    /* Disable OPAMPs */
+    OPAMP1->CSR = 0x00;
+    OPAMP2->CSR = 0x00;
+
+    if (rxGain == USB_AUDIO_RXGAIN_1X) {
+        /* Legacy mode that is compatible with pre-v1.2 hardware */
+        OPAMP2->CSR = OPAMP_FOLLOWER_MODE | OPAMP_VREF_50VDDA | OPAMP_CSR_FORCEVP | OPAMP2_CSR_OPAMP2EN; /* 50% VDD for bias */
+
+        /* Start ADC2 with direct hardware ADC input (no PGA in between) */
+        if (ADC1->CR & ADC_CR_ADSTART)      ADC1->CR |= ADC_CR_ADSTP;
+        if (!(ADC2->CR & ADC_CR_ADSTART))   ADC2->CR |= ADC_CR_ADSTART;
+    } else {
+        /* Initialize OPAMPs so that OPAMP1 is a PGA (non inverting) and OPAMP2 produces the correct DC-bias voltage according to OPAMP1 gain. */
+        static const uint32_t pgaConfig[] = {
+            [USB_AUDIO_RXGAIN_2X] = OPAMP_PGA_MODE | OPAMP_PGA_GAIN_2,          /* ADCin: 0.825V +/- 0.825V */
+            [USB_AUDIO_RXGAIN_4X] = OPAMP_PGA_MODE | OPAMP_PGA_GAIN_4,          /* ADCin: 0.4125V +/- 0.4125V */
+            [USB_AUDIO_RXGAIN_8X] = OPAMP_PGA_MODE | OPAMP_PGA_GAIN_8,          /* ADCin: 0.20625V +/- 0.20625V */
+            [USB_AUDIO_RXGAIN_16X] = OPAMP_PGA_MODE | OPAMP_PGA_GAIN_16         /* ADCin: 0.103125V +/- 0.103125V */
+        };
+
+        static const uint32_t biasConfig[] = {
+            [USB_AUDIO_RXGAIN_2X] = OPAMP_PGA_MODE | OPAMP_PGA_GAIN_8,          /* 3.3V * 3.3% * 8 = 0.8712V */
+            [USB_AUDIO_RXGAIN_4X] = OPAMP_PGA_MODE | OPAMP_PGA_GAIN_4,          /* 3.3V * 3.3% * 4 = 0.4356V */
+            [USB_AUDIO_RXGAIN_8X] = OPAMP_PGA_MODE | OPAMP_PGA_GAIN_2,          /* 3.3V * 3.3% * 2 = 0.2178V */
+            [USB_AUDIO_RXGAIN_16X] = OPAMP_FOLLOWER_MODE                        /* 3.3V * 3.3% * 1 = 0.1089V */
+        };
+
+        /* Set up OPAMP1 PGA */
+        OPAMP1->CSR = pgaConfig[rxGain] | OPAMP_NONINVERTINGINPUT_IO3 | OPAMP1_CSR_OPAMP1EN;
+
+        /* Add a trimming offset adjustment to get closer to the required bias voltage reference of 1.65V/16 = 103mV.
+         * Default setting is 3.3V * 3.3% = 109mV.
+         * These return the factory trim values, because the CSR register (and thus the USERTRIM bit) is 0 */
+        uint32_t trimmingOffsetP2 = (OPAMP2->CSR & OPAMP2_CSR_TRIMOFFSETP_Msk) >> OPAMP2_CSR_TRIMOFFSETP_Pos;
+        uint32_t trimmingOffsetN2 = (OPAMP2->CSR & OPAMP2_CSR_TRIMOFFSETN_Msk) >> OPAMP2_CSR_TRIMOFFSETN_Pos;
+        int8_t trimAdjust = 7; /* Found empirically. It looks like 1 step amounts to roughly 1mV input offset */
+
+        /* Observe the register limits, do saturated arithmetic */
+        trimmingOffsetP2 = (((int32_t) trimmingOffsetP2 + trimAdjust) <= 0x1F) ? trimmingOffsetP2 + trimAdjust : 0x1F;
+        trimmingOffsetN2 = (((int32_t) trimmingOffsetN2 - trimAdjust) >= 0x00) ? trimmingOffsetN2 - trimAdjust : 0x00;
+
+        /* Set up OPAMP2 bias voltage generation, disable the factory trimming */
+        OPAMP2->CSR = biasConfig[rxGain] | OPAMP_VREF_3VDDA | OPAMP_CSR_FORCEVP | OPAMP2_CSR_OPAMP2EN | OPAMP_TRIMMING_USER;
+
+        /* Load trimming values */
+        OPAMP2->CSR |= (OPAMP2->CSR & ~(OPAMP2_CSR_TRIMOFFSETP_Msk | OPAMP2_CSR_TRIMOFFSETN_Msk)) |
+                ((trimmingOffsetP2 << OPAMP2_CSR_TRIMOFFSETP_Pos) & OPAMP2_CSR_TRIMOFFSETP_Msk) |
+                ((trimmingOffsetN2 << OPAMP2_CSR_TRIMOFFSETN_Pos) & OPAMP2_CSR_TRIMOFFSETN_Msk);
+
+        /* Start ADC1 using PGA output as ADC input */
+        if (ADC2->CR & ADC_CR_ADSTART)      ADC2->CR |= ADC_CR_ADSTP;
+        if (!(ADC1->CR & ADC_CR_ADSTART))   ADC1->CR |= ADC_CR_ADSTART;
+    }
+}
+
+static void TX_Config(usb_audio_txboost_t txBoost)
+{
+    /* Set PINA3 (ATTEN Hi-Z) in TX Boost mode, reset PINA3 (pull ATTEN low) in normal mode */
+    if (txBoost == USB_AUDIO_TXBOOST_ON) {
+        GPIOA->BSRR = GPIO_BSRR_BS_3;
+    } else {
+        GPIOA->BRR = GPIO_BRR_BR_3;
+    }
+}
+
+static void Timeout_Timers_Init(void)
+{
+    uint32_t timerFreq = (HAL_RCC_GetHCLKFreq() == HAL_RCC_GetPCLK2Freq()) ? HAL_RCC_GetPCLK2Freq() : 2 * HAL_RCC_GetPCLK2Freq();
+    uint32_t pttTimeout = (settingsRegMap[SETTINGS_REG_VPTT_TIMCTRL] & SETTINGS_REG_VPTT_TIMCTRL_TIMEOUT_MASK) >> SETTINGS_REG_VPTT_TIMCTRL_TIMEOUT_OFFS;
+    uint32_t cosTimeout = (settingsRegMap[SETTINGS_REG_VCOS_TIMCTRL] & SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_MASK) >> SETTINGS_REG_VCOS_TIMCTRL_TIMEOUT_OFFS;
+
+    __HAL_RCC_TIM16_CLK_ENABLE();
+    __HAL_RCC_TIM17_CLK_ENABLE();
+
+   /* TIM16 and TIM17 are timeout-counters for PTT and COS */
+   TIM16->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP;
+   TIM16->PSC = timerFreq / 16000 - 1; /* 16 kHz counter */
+   TIM16->CCR1 = pttTimeout - 1;
+   TIM16->DIER = TIM_DIER_UIE | TIM_DIER_CC1IE;
+
+   TIM17->CR1 = TIM_CLOCKDIVISION_DIV1 | TIM_COUNTERMODE_UP;
+   TIM17->PSC = timerFreq / 16000 - 1; /* 16 kHz counter */
+   TIM17->CCR1 = cosTimeout - 1;
+   TIM17->DIER = TIM_DIER_UIE | TIM_DIER_CC1IE;
+
+   NVIC_SetPriority(TIM16_IRQn, AIOC_IRQ_PRIO_AUDIO);
+   NVIC_EnableIRQ(TIM16_IRQn);
+
+   NVIC_SetPriority(TIM17_IRQn, AIOC_IRQ_PRIO_AUDIO);
+   NVIC_EnableIRQ(TIM17_IRQn);
 }
 
 void USB_AudioInit(void)
@@ -815,6 +1135,8 @@ void USB_AudioInit(void)
     Timer_DAC_Init();
     ADC_Init();
     DAC_Init();
+
+    Timeout_Timers_Init();
 }
 
 void USB_AudioGetSpeakerFeedbackStats(usb_audio_fbstats_t * status)

@@ -1,9 +1,10 @@
+#include <io.h>
 #include "usb_serial.h"
 #include "stm32f3xx_hal.h"
 #include "aioc.h"
 #include "tusb.h"
 #include "led.h"
-#include "ptt.h"
+#include "settings.h"
 #include "usb_descriptors.h"
 
 void USB_SERIAL_UART_IRQ(void)
@@ -46,8 +47,11 @@ void USB_SERIAL_UART_IRQ(void)
         /* RX register is not empty, get character and put into USB send buffer */
         if (tud_cdc_n_write_available(0) > 0) {
             uint8_t c = USB_SERIAL_UART->RDR;
-            if (PTT_Status() == PTT_MASK_NONE) {
-                /* Only store character when no PTT is asserted (shares the same pin) */
+            uint8_t pttStatus = IO_PTTStatus();
+            uint8_t pttRxIgnoreMask = (settingsRegMap[SETTINGS_REG_SERIAL_CTRL] & SETTINGS_REG_SERIAL_CTRL_RXIGNPTT_MASK) >> SETTINGS_REG_SERIAL_CTRL_RXIGNPTT_OFFS;
+
+            if (!(pttStatus & pttRxIgnoreMask) ) {
+                /* Only store character when none of the enabled PTTs are asserted (shares the same pin) */
                 tud_cdc_n_write(0, &c, 1);
                 LED_MODE(0, LED_MODE_FASTPULSE);
             }
@@ -85,9 +89,12 @@ void tud_cdc_rx_cb(uint8_t itf)
 {
     TU_ASSERT(itf == 0, /**/);
 
-    if (PTT_Status() != PTT_MASK_NONE) {
-        /* PTT is currently enabled. Disable all PTT action */
-        PTT_Control(PTT_MASK_NONE);
+    uint8_t pttStatus = IO_PTTStatus();
+    uint8_t pttTxForceMask = (settingsRegMap[SETTINGS_REG_SERIAL_CTRL] & SETTINGS_REG_SERIAL_CTRL_TXFRCPTT_MASK) >> SETTINGS_REG_SERIAL_CTRL_TXFRCPTT_OFFS;
+
+    if (pttStatus & pttTxForceMask) {
+        /* Make sure the selected PTTs are disabled, since they might share a signal with the UART lines */
+        IO_PTTControl(pttStatus & ~pttTxForceMask);
     }
 
     /* This enables the transmitter and the TX-empty interrupt, which handles writing UART data */
@@ -167,12 +174,43 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
     TU_ASSERT(itf == 0, /**/);
 
-    /* PTT Encoding logic */
-    uint8_t pttMask = ((dtr && !rts) ? PTT_MASK_PTT1 : 0);
+    uint8_t pttMask = IO_PTT_MASK_NONE;
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_SERIALDTR_MASK) {
+        pttMask |= dtr ? IO_PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_SERIALRTS_MASK) {
+        pttMask |= rts ? IO_PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_SERIALDTRNRTS_MASK) {
+        pttMask |= (dtr && !rts) ? IO_PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_SERIALNDTRRTS_MASK) {
+        pttMask |= (!dtr && rts) ? IO_PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_SERIALDTR_MASK) {
+        pttMask |= dtr ? IO_PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_SERIALRTS_MASK) {
+        pttMask |= rts ? IO_PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_SERIALDTRNRTS_MASK) {
+        pttMask |= (dtr && !rts) ? IO_PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_SERIALNDTRRTS_MASK) {
+        pttMask |= (!dtr && rts) ? IO_PTT_MASK_PTT2 : 0;
+    }
 
     if (! (USB_SERIAL_UART->CR1 & USART_CR1_TE) ) {
         /* Enable PTT only when UART transmitter is not currently transmitting */
-        PTT_Control(pttMask);
+        IO_PTTControl(pttMask);
     }
 }
 
@@ -217,3 +255,32 @@ void USB_SerialTask(void)
 {
 
 }
+
+#include "device/usbd_pvt.h"
+
+bool USB_SerialSendLineState(uint8_t lineState)
+{
+#if 0
+    /* TODO: This causes issues with the stack if its being called before CDC was initialized? Crashes on terminal connect */
+    uint8_t const rhport = 0;
+    static uint8_t notification[10] = {
+        /* bmRequestType */ 0xA1,
+        /* bNotification */ 0x20,
+        /* wValue */ 0x00, 0x00,
+        /* wIndex */ ITF_NUM_CDC_0, 0x00,
+        /* wLength */ 0x02, 0x00,
+        /* Data */ 0x00, 0x00
+    };
+
+    notification[8] = lineState;
+    notification[9] = 0x00;
+
+    // claim endpoint
+    TU_VERIFY( usbd_edpt_claim(rhport, EPNUM_CDC_0_NOTIF) );
+
+    return usbd_edpt_xfer(rhport, EPNUM_CDC_0_NOTIF, notification, sizeof(notification));
+#else
+    return true;
+#endif
+}
+

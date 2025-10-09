@@ -54,7 +54,7 @@
 /* #define HAL_I2S_MODULE_ENABLED */
 /* #define HAL_IRDA_MODULE_ENABLED */
 #define HAL_IWDG_MODULE_ENABLED
-/* #define HAL_OPAMP_MODULE_ENABLED */
+#define HAL_OPAMP_MODULE_ENABLED
 /* #define HAL_PCD_MODULE_ENABLED */
 #define HAL_PWR_MODULE_ENABLED
 #define HAL_RCC_MODULE_ENABLED
@@ -67,7 +67,7 @@
 #define HAL_TSC_MODULE_ENABLED
 #define HAL_UART_MODULE_ENABLED
 #define HAL_USART_MODULE_ENABLED
-/* #define HAL_WWDG_MODULE_ENABLED */
+#define HAL_WWDG_MODULE_ENABLED
 
 /* ########################## HSE/HSI Values adaptation ##################### */
 /**

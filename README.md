@@ -1,10 +1,12 @@
-[![](https://dcbadge.vercel.app/api/server/wCbXu9R95C?style=flat&theme=default-inverted)](https://discord.gg/wCbXu9R95C)
+[![](https://dcbadge.limes.pink/api/server/wCbXu9R95C?style=flat)](https://discord.gg/wCbXu9R95C)
 [![](https://img.shields.io/github/stars/skuep/AIOC)](https://github.com/skuep/AIOC/stargazers)
 [![](https://img.shields.io/github/v/release/skuep/AIOC?sort=semver)](https://github.com/skuep/AIOC/releases)
 [![](https://img.shields.io/github/license/skuep/AIOC)](https://github.com/skuep/AIOC/blob/master/LICENSE.md)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F2F415AKJV)
+
 # AIOC
-This is the Ham Radio *All-in-one-Cable*. **It is currently in beta testing phase - Be wary!** Please read this README carefully before ordering anything.
+This is the Ham Radio *All-in-one-Cable*. **It is currently still being tested!** Please read this README carefully before ordering anything.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
@@ -16,29 +18,30 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 [![All In One Cable AIOC - Ham Nuggets Season 4 Episode 8 S04E08](http://img.youtube.com/vi/RZjoPNe634o/0.jpg)](http://www.youtube.com/watch?v=RZjoPNe634o "All In One Cable AIOC - Ham Nuggets Season 4 Episode 8 S04E08")
 [![Your BAOFENG Programming Cable Sucks! - Get This! - AIOC All in One Cable](http://img.youtube.com/vi/xRCmXQYRLE0/0.jpg)](http://www.youtube.com/watch?v=xRCmXQYRLE0 "Your BAOFENG Programming Cable Sucks! - Get This! - AIOC All in One Cable")
 
+There is also a German 4-part article with instructions [here](https://dl-nordwest.com/index.php/2024/07/21/aioc-der-wunderadapter-fuer-handfunkgeraete-teil-1-einfuehrung-und-bestellung/).
+
 ## Features ##
 - Cheap & Hackable Digital mode USB interface (similar to digirig, mobilinkd, etc...)
 - Programming Cable Function via virtual Serial Port
 - Compact form-factor (DIY overmolded enclosure is currently TBD)
-- Based on easy-to-hack STM32F302 with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
+- Based on easy-to-hack **STM32F302** with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
 - Can support Dual-PTT HTs
-
+- Supports all popular OSes (Linux, Windows and MacOS with limitations [[*]](https://github.com/skuep/AIOC/issues/13))
+  
 ## Compatibility
 ### Software
   - [Direwolf](#notes-on-direwolf) as AX.25 modem/APRS en+decoder/...
+  - [AllStarLink](#notes-on-allstarlink-asl3) as ASL Node
   - [APRSdroid](#notes-on-aprsdroid) as APRS en+decoder
   - [CHIRP](#notes-on-chirp) for programming
+  - [VaraFM](#notes-on-varafm)
   - ... and more
 
 ### Tested Radios (so far)
   - Wouxun UV-9D Mate (CHIRP + APRS)
   - Baofeng UV-5R (CHIRP + APRS)
-  - BTECH 6X2 (CHIRP) 
-
-## Future Work ##
-- Overmolded enclosure design (DIY using 3D-Printed mold and Resin/Hotglue)
-- Maybe integrate a TNC Modem with KISS interface? (I am not sure if that is worth the effort)
-- "High-Performance" VOX emulation with advanced features (e.g. pre-triggered VOX to activate PTT a few milliseconds before data, reduced tail time)
+  - BTECH 6X2 (CHIRP)
+  - Quansheng UV-K5 ([Quansheng Dock](https://github.com/nicsure/QuanshengDock), [Egzumer](https://github.com/egzumer/uv-k5-firmware-custom) or regular)
 
 ![Top side of PCB](doc/images/k1-aioc-photo.jpg?raw=true "Top side of PCB")
 
@@ -49,7 +52,7 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
 - https://na6d.com
 
 ## How To Fab
-- Go to JLCPCB.com and upload the GERBER-k1-aioc.zip package (under ``kicad/k1-aioc/jlcpcb``)
+- Go to JLCPCB.com and upload the ``GERBER-k1-aioc.zip`` package (under ``kicad/k1-aioc/jlcpcb``)
   - Select PCB Thickness 1.2mm (that is what I recommend with the TRS connectors I used)
   - You may want to select LeadFree HASL
   - Select Silkscreen/Soldermask color to your liking
@@ -61,19 +64,29 @@ You can watch the videos of the *Temporarily Offline* and *HAM RADIO DUDE* YouTu
   - Click "Add BOM File" and upload ``BOM-k1-aioc.csv``
   - Click "Add CPL File" and upload ``CPL-k1-aioc.csv``
   - Press Next
-  - Look Through components, see if something is missing or problematic and press Next
+  - Look Through components, see if something is missing or problematic
+  - **Make sure that all listed components are selected** and press Next 
   - Check everything looks roughly good (rotations are already baked-in and should be correct). Save to Cart
 
 This gives you 5 (or more) SMD assembled AIOC. The only thing left to do is soldering on the TRS connectors (see [here](#how-to-assemble)).
 The total bill should be around 60$ US for 5 pieces plus tax and shipping from China.
 
-Note that the following message from JLCPCB is okay and can be ignored.
+__Note__ that the following message from JLCPCB is okay and can be ignored.
 ````
 The below parts won't be assembled due to data missing.
 H1,H2 designators don't exist in the BOM file.
 J2,D3,D4,R17 designators don't exist in the CPL file.
 ````
 
+__Note__ for people doing their own PCB production: I suggest using the LCSC part numbers in the BOM file as a guide on what to buy (especially regarding the MCU).
+
+__Note__ As of 2025-09-25, the current hardware version is **1.2**. The minimum firmware version for this hardware version is 1.4.0. 
+The following features have been added.
+- Support for an external hardware input (e.g. for COS)
+- A split pad for the PTT/UART contact, so in case you would like to use the AIOC hardware for another purpose than a K1-style connector, you can separate these two signals that are otherwise connected to the same TRS contact.
+- Adjustable input and output audio levels (line-level, mic-level)
+- A fox hunt mode, where the AIOC operates as a simple morse code beacon
+  
 ## How To Assemble
 This is the process I use for building. See photographs in ``images`` folder.
 - You need to use **Monacor** ``PG-204P`` and ``PG-203P`` or compatible TRS connectors (2 solder lugs and a big tab for the sleeve connection). **Adafruit** products ``1800`` and ``1798`` are confirmed to work as well.
@@ -82,6 +95,9 @@ This is the process I use for building. See photographs in ``images`` folder.
 - Insert the AIOC PCB into the solder guide
 - Solder sleeve tab on the back side for both TRS connectors first
 - Turn around PCB and solder remaining solder lugs
+- Optionally you can 3D print a case for your AIOC. [This model](https://www.thingiverse.com/thing:6144997) has been designed by a third party but is confirmed to work with the AIOC.
+
+__Note__ It is unfortunately quite common that the TRS connectors have intermittent contact after soldering the ring or tip tabs. In this case, it helps to re-melt the solder joint, then using e.g. tweezer slightly assert some sideways force onto the contact and let the solder joint solidify **while applying the pressure on the contact**. This will keep some tension on the area where the tab internally connects to the barrel and thus give a solid (spring loaded) connection.
 
 ## How To Build
 For building the firmware, clone the repository and initialize the submodules. Create an empty workspace with the STM32CubeIDE and import the project.
@@ -95,12 +111,14 @@ For building the firmware, clone the repository and initialize the submodules. C
 ### Initial programming
 The following steps are required for initial programming of the AIOC:
 - Short outermost pins on the programming header. This will set the device into bootloader mode in the next step.
+![Shorting pins for bootloader mode](doc/images/k1-aioc-dfu.jpg?raw=true "Shorting pins for bootloader mode")
 - Connect USB-C cable to the AIOC PCB
 - Use a tool like ``dfu-util`` to program the firmware binary from the GitHub Releases page like this:
   ````
-  dfu-util -a 0 -s 0x08000000 -D aioc-fw-x-y-z.bin
+  dfu-util -a 0 -s 0x08000000:leave -D aioc-fw-x-y-z.bin
   ````
   __Note__ that a ``libusb`` driver is required for this. On Windows there are additional steps required as shown [here](https://yeswolf.github.io/dfu) (*DFuSe Utility and dfu-util*). On other operating systems (e.g. Linux, MacOS), this just works ™ (provided libusb is installed on your system).
+  On Linux (and MacOS), your user either needs to have the permission to use libusb (``plugdev`` group) or you might need to use ``sudo``.
 - Remove short from first step, unplug and replug the device, it should now enumerate as the AIOC device
 
 ### Firmware updating
@@ -136,8 +154,14 @@ Since firmware version 1.2.0, a CM108 style PTT interface is available for publi
 Direwolf on Linux is confirmed working, please report any issues. Note that currently, Direwolf reports some warnings when using the CM108 PTT interface on the AIOC. 
 While they are annoying, they are safe to ignore and require changes in the upstream direwolf sourcecode. See https://github.com/wb2osz/direwolf/issues/448 for more details.
 
+Since firmware version 1.3.0, a HID interface is also available, that allows reconfiguration of the AIOC from the PC. There are code snippets in the Release Notes for various features.
+There is also a command-line utility by Hrafnkell Eiríksson available [here](https://github.com/hrafnkelle/aioc-util).
+
+**For advanced use of the AIOC, refer to this pinout image.**
+![](doc/images/k1-aioc-pinout.svg)
+
 ## Notes on Direwolf
-- Follow the regular setup guide with direwolf to determine the correct audio device to use. 
+- Follow the regular setup guide with [Direwolf](https://github.com/wb2osz/direwolf) to determine the correct audio device to use. 
   For the serial and CM108 PTT interfaces on Linux, you need to set correct permissions on the ttyACM/hidraw devices. Consult Direwolf manual.
 - Configure the device as follows
   ````
@@ -151,8 +175,25 @@ While they are annoying, they are safe to ignore and require changes in the upst
   [...]
   ````
 
+## Notes on AllStarLink (ASL3)
+Once your cable is emulating a CM108, it becomes quite simple to plug into your HT and setup a simple simplex AllStarLink node that talks to your favorite repeater or node.
+
+In `asl-menu`, set:
+- Device type: `usbradio` (menu sections: 2 > A1 > N4 > I2)
+- Duplex type: `1` (menu sections: 2 > A1 > N5)
+
+Edit `usbradio.conf` (menu sections: 6 > H) (for a Puxing PX-888 cheap Chineese HT)
+- `rxboost = 0`
+- `rxsqhyst = 500`
+- `carrierfrom = usbinvert`
+- `ctcssfrom = no`
+- `rxdemod = speaker`
+- `txprelim = no`
+- `invertptt = no`
+
+
 ## Notes on APRSdroid
-APRSdroid support has been added by AIOC by implementing support for the fixed 22050 Hz sample rate that APRSdroid requires. 
+[APRSdroid](https://aprsdroid.org/) support has been added by AIOC by implementing support for the fixed 22050 Hz sample rate that APRSdroid requires. 
 It is important to notice, that the exact sample rate can not be achieved by the hardware, due to the 8 MHz crystal. 
 The actual sample rate used is 22052 Hz (which represents around 90 ppm of error). From my testing this does not seem to be a problem for APRS at all.
 
@@ -174,3 +215,16 @@ Upload:
   - Select Radio->Upload to Radio
   - That's it
 
+## Notes on VaraFM
+Select "DTR only" for PTT Pin, so that the correct RTS/DTR sequence is generated for PTT
+
+# Known issues
+There are known issues with EMI, when using a handheld radio with a monopole (i.e. stock) antenna. In this case, the USB cable will (inadvertently) work as a tiger-tail (counterpoise) and thus, high RF currents go through the USB lines which cause issues with the USB connection. Some people have connected cables between the radio and the AIOC and put a ferrite core on those wires, which seems to reduce those issues. I am trying to find out, which of the wires between the radio and the AIOC produce the problem, so that we might add SMD ferrites on the AIOC in the future
+
+As a workaround, you can try to reduce the transmit power or use a tiger-tail (counterpoise). Additionally, a good solution is to use a balanced antenna, such as my [EZ-Dipole](https://github.com/skuep/EZ-Dipole).
+
+# Future work
+I encourage you to check for Pre-Releases announcing upcoming features. Currently we are working on
+- **Configurable AIOC**: Change the way the PTT is asserted or the USB VID:PID that the AIOC uses using a Python script. These settings can be stored on the AIOC.
+- **Virtual-PTT**: This feature allows your AIOC to be configured to automatically assert the PTT line when it receives TX data from your PC.
+- **Virtual-COS**: The AIOC will notify your PC (e.g. using CM108 emulation) that there is audio data on the microphone input.

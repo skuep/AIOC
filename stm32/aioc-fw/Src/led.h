@@ -11,7 +11,7 @@
 
 #define LED_OFF_LEVEL   0
 #define LED_IDLE_LEVEL  25
-#define LED_FULL_LEVEL  255
+#define LED_FULL_LEVEL  249
 
 typedef enum {
     LED_MODE_SOLID = 0,

@@ -1,36 +1,70 @@
+#include <io.h>
 #include "usb_hid.h"
 #include "tusb.h"
-#include "ptt.h"
+#include "settings.h"
 #include "usb_descriptors.h"
 
 #define USB_HID_INOUT_REPORT_LEN  4
+#define USB_HID_FEATURE_REPORT_LEN 6
 
+static uint8_t buttonState = 0x00;
 static uint8_t gpioState = 0x00;
+static uint8_t currentAddress = 0x0000;
 
 static void MakeReport(uint8_t * buffer)
 {
     /* TODO: Read the actual states of the GPIO input hardware pins. */
-    buffer[0] = 0x00;
+    buffer[0] = buttonState & 0x0F;
     buffer[1] = gpioState;
     buffer[2] = 0x00;
     buffer[3] = 0x00;
 }
 
-static void SendReport(void)
+static bool SendReport(void)
 {
     uint8_t reportBuffer[USB_HID_INOUT_REPORT_LEN];
     MakeReport(reportBuffer);
 
-    tud_hid_report(0, reportBuffer, sizeof(reportBuffer));
+    return tud_hid_report(0, reportBuffer, sizeof(reportBuffer));
 }
 
 static void ControlPTT(uint8_t gpio)
 {
-    /* PTT1 on GPIO 3, PTT2 on GPIO4 */
-    uint8_t pttMask = (gpio & 0x04 ? PTT_MASK_PTT1 : 0) |
-                      (gpio & 0x08 ? PTT_MASK_PTT2 : 0);
+    uint8_t pttMask = IO_PTT_MASK_NONE;
 
-    PTT_Control(pttMask);
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_CM108GPIO1_MASK) {
+        pttMask |= gpio & 0x01 ? IO_PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_CM108GPIO2_MASK) {
+        pttMask |= gpio & 0x02 ? IO_PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_CM108GPIO3_MASK) {
+        pttMask |= gpio & 0x04 ? IO_PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX0] & SETTINGS_REG_AIOC_IOMUX0_OUT1SRC_CM108GPIO4_MASK) {
+        pttMask |= gpio & 0x08 ? IO_PTT_MASK_PTT1 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_CM108GPIO1_MASK) {
+        pttMask |= gpio & 0x01 ? IO_PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_CM108GPIO2_MASK) {
+        pttMask |= gpio & 0x02 ? IO_PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_CM108GPIO3_MASK) {
+        pttMask |= gpio & 0x04 ? IO_PTT_MASK_PTT2 : 0;
+    }
+
+    if (settingsRegMap[SETTINGS_REG_AIOC_IOMUX1] & SETTINGS_REG_AIOC_IOMUX1_OUT2SRC_CM108GPIO4_MASK) {
+        pttMask |= gpio & 0x08 ? IO_PTT_MASK_PTT2 : 0;
+    }
+
+    IO_PTTControl(pttMask);
 }
 
 // Invoked when received GET_REPORT control request
@@ -38,28 +72,38 @@ static void ControlPTT(uint8_t gpio)
 // Return zero will cause the stack to STALL request
 uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen)
 {
-  (void) itf;
-  (void) report_id;
-  (void) buffer;
-  (void) reqlen;
+    (void) itf;
+    (void) report_id;
+    (void) buffer;
+    (void) reqlen;
 
-  switch (report_type) {
-      case HID_REPORT_TYPE_INPUT:
-          TU_ASSERT(reqlen >= USB_HID_INOUT_REPORT_LEN, 0);
+    switch (report_type) {
+        case HID_REPORT_TYPE_INPUT:
+            TU_ASSERT(reqlen >= USB_HID_INOUT_REPORT_LEN, 0);
 
-          MakeReport(buffer);
-          return USB_HID_INOUT_REPORT_LEN;
+            MakeReport(buffer);
+            return USB_HID_INOUT_REPORT_LEN;
 
-      case HID_REPORT_TYPE_FEATURE:
-          /* Custom extension for configuring the AIOC */
-          break;
+        case HID_REPORT_TYPE_FEATURE:
+            TU_ASSERT(reqlen >= USB_HID_FEATURE_REPORT_LEN, 0);
+            uint32_t data;
+            Settings_RegRead(currentAddress, &data);
 
-      default:
-          TU_BREAKPOINT();
-          break;
-  }
+            buffer[0] = 0x00;
+            buffer[1] = currentAddress;
+            buffer[2] = (uint8_t) (data >> 0);
+            buffer[3] = (uint8_t) (data >> 8);
+            buffer[4] = (uint8_t) (data >> 16);
+            buffer[5] = (uint8_t) (data >> 24);
 
-  return 0;
+            return reqlen;
+
+        default:
+            TU_BREAKPOINT();
+            break;
+    }
+
+    return 0;
 }
 
 // Invoked when received SET_REPORT control request
@@ -94,7 +138,40 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
             break;
 
         case HID_REPORT_TYPE_FEATURE:
-            /* Custom extension for configuring the AIOC */
+            TU_ASSERT(bufsize == USB_HID_FEATURE_REPORT_LEN, /* */);
+            uint8_t ctrlWord = ((((uint8_t)  buffer[0]) <<  0) );
+            uint8_t address =  ((((uint8_t)  buffer[1]) <<  0) );
+            uint32_t data = (   (((uint32_t) buffer[2]) <<  0) |
+                                (((uint32_t) buffer[3]) <<  8) |
+                                (((uint32_t) buffer[4]) << 16) |
+                                (((uint32_t) buffer[5]) << 24) );
+
+
+
+            if (ctrlWord & 0x10UL) {
+                Settings_Default();
+            }
+
+            if (ctrlWord & 0x40UL) {
+                Settings_Recall();
+            }
+
+            if (ctrlWord & 0x01UL) {
+                /* Write strobe */
+                Settings_RegWrite(address, data);
+            }
+
+            if (ctrlWord & 0x80UL) {
+                Settings_Store();
+            }
+
+            if (ctrlWord & 0x20UL) {
+                /* Reboot */
+                while(1) {
+                    /* Let IWDG expire for rebooting */
+                }
+            }
+            currentAddress = address;
             break;
 
         default:
@@ -108,4 +185,11 @@ void USB_HIDInit(void)
 {
 
 
+}
+
+bool USB_HIDSendButtonState(uint8_t buttonMask)
+{
+    buttonState = buttonMask;
+
+    return SendReport();
 }
