@@ -55,7 +55,7 @@ void Settings_Store(void)
 
 
     if (HAL_FLASHEx_Erase(&eraseInitStruct, &pageError) != HAL_OK) {
-        uint32_t flashError = HAL_FLASH_GetError();
+        // uint32_t flashError = HAL_FLASH_GetError();
         return;
     }
 
@@ -66,7 +66,7 @@ void Settings_Store(void)
 
     while (wordCount--) {
         if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, wordAddress, *wordPtr) != HAL_OK) {
-            uint32_t flashError = HAL_FLASH_GetError();
+            // uint32_t flashError = HAL_FLASH_GetError();
             return;
         }
 
