@@ -26,7 +26,7 @@ There is also a German 4-part article with instructions [here](https://dl-nordwe
 - Compact form-factor (DIY overmolded enclosure is currently TBD)
 - Based on easy-to-hack **STM32F302** with internal ADC/DAC (Programmable via USB bootloader using [DFU](#how-to-program))
 - Can support Dual-PTT HTs
-- Supports all popular OSes (Linux, Windows and MacOS with limitations [[*]](https://github.com/skuep/AIOC/issues/13))
+- Supports all popular OSes (Linux, Windows and MacOS)
   
 ## Compatibility
 ### Software
