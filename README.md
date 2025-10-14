@@ -72,7 +72,7 @@ H1,H2 designators don't exist in the BOM file.
 J2,D3,D4,R17 designators don't exist in the CPL file.
 ````
 
-__Note__ for people doing their own PCB production: I suggest using the LCSC part numbers in the BOM file as a guide on what to buy (especially regarding the MCU).
+__Note__ for people doing their own PCB production: I suggest using the LCSC part numbers in the BOM file as a guide on what to buy (especially regarding the MCU). Despite the STM32F373 in the BOM, the firmware currently only supports the STM32F302 as given in the LCSC ordering information.
 
 __Note__ As of 2025-09-25, the current hardware version is **1.2**. The minimum firmware version for this hardware version is 1.4.0. 
 The following features have been added.
