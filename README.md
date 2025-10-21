@@ -219,6 +219,6 @@ As a workaround, you can try to reduce the transmit power or use a tiger-tail (c
 
 # Future work
 I encourage you to check for Pre-Releases announcing upcoming features. Currently we are working on
-- **Configurable AIOC**: Change the way the PTT is asserted or the USB VID:PID that the AIOC uses using a Python script. These settings can be stored on the AIOC.
-- **Virtual-PTT**: This feature allows your AIOC to be configured to automatically assert the PTT line when it receives TX data from your PC.
+- **Configurable AIOC**: (Now enabled in testing) Change the way the PTT is asserted or the USB VID:PID that the AIOC uses using a Python script. These settings can be stored on the AIOC.
+- **Virtual-PTT**: (Now enabled in testing) This feature allows your AIOC to be configured to automatically assert the PTT line when it receives TX data from your PC.
 - **Virtual-COS**: The AIOC will notify your PC (e.g. using CM108 emulation) that there is audio data on the microphone input.
