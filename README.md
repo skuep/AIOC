@@ -6,7 +6,7 @@
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F2F415AKJV)
 
 # AIOC
-This is the Ham Radio *All-in-one-Cable*. **It is currently still being tested!** Please read this README carefully before ordering anything.
+This is the Ham Radio *All-in-one-Cable*. It has been in testing stage for a long time, but so far no dealbreaking issues have been found so it is pretty safe to build it. Still, please read this README carefully before ordering anything.
 
 ![AIOC with Wouxun and Direwolf](doc/images/k1-aioc-wouxun.jpg?raw=true "AIOC with Wouxun and Direwolf")
 
@@ -217,8 +217,4 @@ There are known issues with EMI, when using a handheld radio with a monopole (i.
 
 As a workaround, you can try to reduce the transmit power or use a tiger-tail (counterpoise). Additionally, a good solution is to use a balanced antenna, such as my [EZ-Dipole](https://github.com/skuep/EZ-Dipole).
 
-# Future work
-I encourage you to check for Pre-Releases announcing upcoming features. Currently we are working on
-- **Configurable AIOC**: Change the way the PTT is asserted or the USB VID:PID that the AIOC uses using a Python script. These settings can be stored on the AIOC.
-- **Virtual-PTT**: This feature allows your AIOC to be configured to automatically assert the PTT line when it receives TX data from your PC.
-- **Virtual-COS**: The AIOC will notify your PC (e.g. using CM108 emulation) that there is audio data on the microphone input.
+
