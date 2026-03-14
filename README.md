@@ -35,6 +35,7 @@ There is also a German 4-part article with instructions [here](https://dl-nordwe
   - [APRSdroid](#notes-on-aprsdroid) as APRS en+decoder
   - [CHIRP](#notes-on-chirp) for programming
   - [VaraFM](#notes-on-varafm)
+  - [ZPTTLink](#notes-on-zpttlink)
   - ... and more
 
 ### Tested Radios (so far)
@@ -211,6 +212,23 @@ Upload:
 
 ## Notes on VaraFM
 Select "DTR only" for PTT Pin, so that the correct RTS/DTR sequence is generated for PTT
+
+### Notes on ZPTTLink
+
+**ZPTTLink** is an open-source Zello ↔ RF gateway designed to work with USB radio interfaces such as the **AIOC cable**.
+
+It connects radios to the Zello network by detecting PTT signals from the serial interface and triggering Zello’s push-to-talk while routing audio between the radio and the computer.
+
+Typical use cases include:
+
+- RF ↔ Zello gateways
+- GMRS or ham radio network bridges
+- emergency communications systems
+- experimental radio gateways
+
+Project repository:
+
+https://github.com/maxhayim/ZPTTLink
 
 # Known issues
 There are known issues with EMI, when using a handheld radio with a monopole (i.e. stock) antenna. In this case, the USB cable will (inadvertently) work as a tiger-tail (counterpoise) and thus, high RF currents go through the USB lines which cause issues with the USB connection. Some people have connected cables between the radio and the AIOC and put a ferrite core on those wires, which seems to reduce those issues. I am trying to find out, which of the wires between the radio and the AIOC produce the problem, so that we might add SMD ferrites on the AIOC in the future
