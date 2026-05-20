@@ -95,6 +95,8 @@ static inline  uint8_t IO_PTTStatus(void)
            (inputReg & IO_OUT_PIN_2 ? IO_PTT_MASK_PTT2 : 0);
 }
 
+void IO_Task(void);
+
 static inline  void IO_Init(void)
 {
     __HAL_RCC_GPIOA_CLK_ENABLE();

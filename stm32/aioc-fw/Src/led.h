@@ -28,8 +28,8 @@ typedef enum {
 extern uint8_t LedStates[2];
 extern uint8_t LedModes[2];
 
-#define LED_SET(i, onOff) { __disable_irq(); LedStates[i] = !!(onOff); __enable_irq(); }
-#define LED_MODE(i, mode) { __disable_irq(); LedModes[i] = (mode); __enable_irq(); }
+#define LED_SET(i, onOff) { uint32_t _p = __get_PRIMASK(); __disable_irq(); LedStates[i] = !!(onOff); __set_PRIMASK(_p); }
+#define LED_MODE(i, mode) { uint32_t _p = __get_PRIMASK(); __disable_irq(); LedModes[i] = (mode); __set_PRIMASK(_p); }
 
 void LED_Init(void);
 

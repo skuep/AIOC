@@ -29,6 +29,7 @@ typedef struct {
 } usb_audio_fbstats_t;
 
 void USB_AudioInit(void);
+void USB_AudioTask(void);
 void USB_AudioGetSpeakerFeedbackStats(usb_audio_fbstats_t * status);
 void USB_AudioGetSpeakerBufferStats(usb_audio_bufstats_t * status);
 

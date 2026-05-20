@@ -549,7 +549,7 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
     /* Calculate min/max/average statistics of buffer fill level */
     if ( (count - n_bytes_received) < speakerBufferLvlMin) speakerBufferLvlMin = count - n_bytes_received;
     if ( count > speakerBufferLvlMax) speakerBufferLvlMax = count;
-    speakerBufferLvlAvg = ((uint64_t) speakerBufferLvlAvg * (65536 - SPEAKER_BUFFERLVL_AVG) + ((uint64_t) count << 16) * SPEAKER_BUFFERLVL_AVG) / 65536.0;
+    speakerBufferLvlAvg = (uint32_t)(((uint64_t) speakerBufferLvlAvg * (65536 - SPEAKER_BUFFERLVL_AVG) + ((uint64_t) count << 16) * SPEAKER_BUFFERLVL_AVG) >> 16);
 
     if (speakerState == STATE_START) {
         if (count >= SPEAKER_BUFFERLVL_TARGET) {
@@ -716,7 +716,7 @@ TU_ATTR_FAST_FUNC void tud_audio_feedback_interval_isr(uint8_t func_id, uint32_t
     /* Handle min/max/avg statistics */
     if (feedback < speakerFeedbackMin) speakerFeedbackMin = feedback;
     if (feedback > speakerFeedbackMax) speakerFeedbackMax = feedback;
-    speakerFeedbackAvg = (speakerFeedbackAvg * (65536 - SPEAKER_FEEDBACK_AVG) + ((uint64_t) feedback << 16) * SPEAKER_FEEDBACK_AVG) / 65536.0;
+    speakerFeedbackAvg = (speakerFeedbackAvg * (65536 - SPEAKER_FEEDBACK_AVG) + ((uint64_t) feedback << 16) * SPEAKER_FEEDBACK_AVG) >> 16;
 
     if (speakerState == STATE_START) {
         /* Initialize/overwrite min/max/avg during start */
@@ -834,6 +834,10 @@ void TIM16_IRQHandler(void)
     TIM16->SR = ~flags;
 }
 
+/* COS state change deferred from TIM17_IRQHandler to main loop — COS_VirtualSetState
+ * calls tud_hid_report which is not safe to call from interrupt context in TinyUSB. */
+static volatile int8_t cosPendingState = -1;
+
 void TIM17_IRQHandler(void)
 {
     /* This is a timeout counter for the automatic COS function */
@@ -849,8 +853,7 @@ void TIM17_IRQHandler(void)
             /* Update debug register */
             settingsRegMap[SETTINGS_REG_INFO_AUDIO0] |= SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK;
 
-            /* Set COS state */
-            COS_VirtualSetState(0x01);
+            cosPendingState = 1;
         }
     } else if (flags & TIM_SR_CC1IF) {
         /* The idle timeout (without any action on the ADC) was reached. Disable timer and notify host */
@@ -859,11 +862,19 @@ void TIM17_IRQHandler(void)
         /* Update debug register */
         settingsRegMap[SETTINGS_REG_INFO_AUDIO0] &= ~SETTINGS_REG_INFO_AIOC0_VCOSSTATE_MASK;
 
-        /* Set COS state */
-        COS_VirtualSetState(0x00);
+        cosPendingState = 0;
     }
 
     TIM17->SR = ~flags;
+}
+
+void USB_AudioTask(void)
+{
+    int8_t pending = cosPendingState;
+    if (pending >= 0) {
+        cosPendingState = -1;
+        COS_VirtualSetState((uint8_t) pending);
+    }
 }
 
 static void GPIO_Init(void)
