@@ -7,6 +7,10 @@
 #include "settings.h"
 #include "usb_descriptors.h"
 
+/* CDC flush deferred from UART RTOF ISR to main loop — tud_cdc_n_write_flush calls
+ * usbd_edpt_claim which is not safe to call from interrupt context in TinyUSB. */
+static volatile bool serialFlushPending = false;
+
 void USB_SERIAL_UART_IRQ(void)
 {
     uint32_t ISR = USB_SERIAL_UART->ISR;
@@ -65,8 +69,7 @@ void USB_SERIAL_UART_IRQ(void)
 
     if (ISR & USART_ISR_RTOF) {
         USB_SERIAL_UART->ICR = USART_ICR_RTOCF;
-        /* Receiver timeout. Flush data via USB. */
-        tud_cdc_n_write_flush(0);
+        serialFlushPending = true;
     }
 
     if (ISR & USART_ISR_ORE) {
@@ -253,7 +256,10 @@ void USB_SerialInit(void)
 
 void USB_SerialTask(void)
 {
-
+    if (serialFlushPending) {
+        serialFlushPending = false;
+        tud_cdc_n_write_flush(0);
+    }
 }
 
 #include "device/usbd_pvt.h"

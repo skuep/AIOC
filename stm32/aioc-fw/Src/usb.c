@@ -121,6 +121,7 @@ void USB_Init(void)
 void USB_Task(void)
 {
     USB_SerialTask();
+    USB_AudioTask();
     tud_task();
 }
 

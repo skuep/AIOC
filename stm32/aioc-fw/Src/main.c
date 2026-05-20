@@ -204,6 +204,7 @@ int main(void)
     HAL_IWDG_Init(&IWDGHandle);
 
     while (1) {
+        IO_Task();
         USB_Task();
 
         static uint32_t lastTick = 0;
