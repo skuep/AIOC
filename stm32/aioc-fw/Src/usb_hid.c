@@ -1,5 +1,6 @@
 #include <io.h>
 #include "usb_hid.h"
+#include "usb_serial.h"
 #include "tusb.h"
 #include "settings.h"
 #include "usb_descriptors.h"
@@ -64,7 +65,11 @@ static void ControlPTT(uint8_t gpio)
         pttMask |= gpio & 0x08 ? IO_PTT_MASK_PTT2 : 0;
     }
 
-    IO_PTTControl(pttMask);
+    /* PTT1 and UART TX share the 3.5mm ring connector pin on v1.0/v1.1 hardware.
+     * Skip PTT assert while UART TX is active to avoid driving the pin from two push-pull outputs. */
+    if (!(USB_SERIAL_UART->CR1 & USART_CR1_TE)) {
+        IO_PTTControl(pttMask);
+    }
 }
 
 // Invoked when received GET_REPORT control request
