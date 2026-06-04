@@ -271,6 +271,33 @@ static uint8_t ascii_to_utf16(uint8_t *buffer, uint32_t size, const char *str) {
     return len;
 }
 
+// Microsoft OS String Descriptor (Index 0xEE)
+// Returns "MSFT100" signature and the Vendor Code (0x20)
+__attribute__((aligned(4))) const uint8_t desc_ms_os_string[] = {
+    0x12, TUSB_DESC_STRING,
+    'M', 0, 'S', 0, 'F', 0, 'T', 0, '1', 0, '0', 0, '0', 0,
+    MS_OS_DESC_VENDOR_CODE,
+    0x00
+};
+
+// Microsoft OS 1.0 Compatible ID Feature Descriptor
+// Returns "WINUSB" for Interface #6 (ITF_NUM_DFU_RT)
+__attribute__((aligned(4))) const uint8_t desc_ms_os_compat_id[] = {
+    // Header (16 bytes)
+    0x28, 0x00, 0x00, 0x00, // Descriptor length (40 bytes)
+    0x00, 0x01,             // Version 1.0 (BCD)
+    0x04, 0x00,             // Compatibility ID Descriptor Index (0x0004)
+    0x01,                   // Number of sections (1)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Reserved (7 bytes)
+
+    // Section 1 (24 bytes)
+    ITF_NUM_DFU_RT,         // Interface Number (6)
+    0x01,                   // Reserved (must be 0x01)
+    'W', 'I', 'N', 'U', 'S', 'B', 0x00, 0x00, // Compatible ID (8 bytes)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Sub-Compatible ID (8 bytes)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00  // Reserved (6 bytes)
+};
+
 // Invoked when received GET STRING DESCRIPTOR request
 // Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
 const uint16_t * tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
@@ -281,6 +308,9 @@ const uint16_t * tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     (void) langid;
 
     switch (index) {
+    case STR_IDX_MS_OS_STRING:
+        return (const uint16_t *) desc_ms_os_string;
+
     case STR_IDX_LANGUAGE:
         ptr[0] = 0x09;
         ptr[1] = 0x04;
@@ -361,4 +391,21 @@ bool USB_DescUAC2Quirk(void)
         /* Other patterns hint to Windows, which requires the quirk. Or Linux, which doesn't care and works either way */
         return true;
     }
+}
+
+// Invoked when received control request with VENDOR TYPE
+bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request) {
+    // nothing to do with DATA & ACK stage
+    if (stage != CONTROL_STAGE_SETUP) return true;
+
+    if (request->bmRequestType_bit.type == TUSB_REQ_TYPE_VENDOR) {
+        if (request->bRequest == MS_OS_DESC_VENDOR_CODE) {
+            if (request->wIndex == 0x0004) {
+                return tud_control_xfer(rhport, request, (void *)(uintptr_t) desc_ms_os_compat_id, sizeof(desc_ms_os_compat_id));
+            }
+        }
+    }
+
+    // stall unknown request
+    return false;
 }
