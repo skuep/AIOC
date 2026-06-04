@@ -37,6 +37,10 @@ enum USB_STRING_IDX {
 #define USB_PID                     0x7388
 #define USB_BCD                     0x0200
 
+#define MS_OS_DESC_VENDOR_CODE      0x20
+#define STR_IDX_MS_OS_STRING        0xEE
+
+
 #define USB_STRING_MANUFACTURER     "AIOC"
 #define USB_STRING_PRODUCT          "All-In-One-Cable"
 #define USB_STRING_AUDIOITF         "AIOC Audio"
