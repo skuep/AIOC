@@ -1,3 +1,5 @@
 (sym_lib_table
+  (version 7)
   (lib (name "aioc")(type "KiCad")(uri "${KIPRJMOD}/../library/aioc.kicad_sym")(options "")(descr ""))
+  (lib (name "TPS7A20")(type "KiCad")(uri "${KIPRJMOD}/TPS7A20.kicad_sym")(options "")(descr ""))
 )
